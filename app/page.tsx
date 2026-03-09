@@ -1,8 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 
+interface ApiResponse {
+  message: string;
+  data: unknown;
+}
+
 export default function Home() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ApiResponse | null>(null);
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/test-db`)
