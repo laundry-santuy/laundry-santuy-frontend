@@ -97,37 +97,10 @@ function UserProfile({
   user: NonNullable<SidebarProps["user"]>;
   colors: (typeof colorMap)[keyof typeof colorMap];
 }) {
-  const [open, setOpen] = useState(false);
-
   return (
     <div className="border-t border-neutral-100 p-3">
-      {/* Overlay */}
-      {open && (
-        <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-      )}
-
-      {/* Popup */}
-      {open && (
-        <div
-          className="fixed z-50 w-48 bg-white border border-neutral-200 rounded-xl shadow-lg p-1.5"
-          style={{ bottom: "72px", left: "16px" }}
-        >
-          <Link
-            href="#"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
-          >
-            <LogOut className="w-4 h-4 shrink-0" />
-            Logout
-          </Link>
-        </div>
-      )}
-
-      {/* Trigger */}
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-3 w-full px-2 py-2 rounded-xl hover:bg-neutral-50 transition-colors"
-      >
+      {/* User info */}
+      <div className="flex items-center gap-3 px-2 py-2">
         <div
           className={cn(
             "w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
@@ -136,21 +109,24 @@ function UserProfile({
         >
           {user.initials}
         </div>
-        <div className="flex-1 text-left min-w-0">
+        <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-neutral-900 truncate leading-tight">
             {user.name}
           </p>
           <p className="text-xs text-neutral-400 leading-tight">{user.role}</p>
         </div>
-        <ChevronUp
-          className={cn(
-            "w-4 h-4 text-neutral-400 shrink-0 transition-transform duration-200",
-            open ? "rotate-0" : "rotate-180",
-          )}
-        />
-      </button>
+      </div>
+
+      {/* Logout langsung di bawah */}
+      <Link
+        href="#"
+        className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors mt-1"
+      >
+        <LogOut className="w-4 h-4 shrink-0" />
+        Logout
+      </Link>
     </div>
-  );
+  )
 }
 
 export function Sidebar({
@@ -165,9 +141,11 @@ export function Sidebar({
   const colors = colorMap[accentColor];
 
   return (
-    <aside className="fixed left-0 top-0 w-64 h-screen bg-white flex flex-col z-40">
+    <aside className="sticky left-0 top-0 w-64 h-screen bg-white flex flex-col z-40 shrink-0">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-[18px] border-b border-neutral-100">
+        <p className="px-4 font-normal text-lg text-neutral-300">PREFERENCES</p>
+
         <div
           className={cn(
             "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
@@ -186,6 +164,7 @@ export function Sidebar({
 
       {/* Nav Items */}
       <nav className="flex-1 flex flex-col gap-1 px-2 py-3">
+
         {navItems.map((item) => (
           <NavLink
             key={item.id}
@@ -200,7 +179,7 @@ export function Sidebar({
       {bottomItems && bottomItems.length > 0 && (
         <>
           <div className="mx-2" />
-          <p className="px-4 font-semibold text-neutral-200">Preferences</p>
+          <p className="px-4 font-normal text-lg text-neutral-300">PREFERENCES</p>
           <nav className="flex flex-col gap-1 px-2 py-3">
             {bottomItems.map((item) => (
               <NavLink

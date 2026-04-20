@@ -55,8 +55,16 @@
 }
 
 :root {
-  --background: #ffffff;
+  --background: #F0F1F2;
   --foreground: #171717;
+  --sidebar-background: #ffffff;
+  --sidebar-foreground: #191C1D;
+  --sidebar-primary: #2671EE;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #EDF0FF;
+  --sidebar-accent-foreground: #0058CA;
+  --sidebar-border: #E1E3E4;
+  --sidebar-ring: #2671EE;
 }
 
 [data-radix-popper-content-wrapper] {
