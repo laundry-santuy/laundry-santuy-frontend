@@ -1,27 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+@theme {
+  /* Primary */
+  --color-primary-50: #EDF0FF;
+  --color-primary-100: #D9E2FF;
+  --color-primary-200: #B0C6FF;
+  --color-primary-300: #85A9FF;
+  --color-primary-400: #558DFF;
+  --color-primary-500: #2671EE;
+  --color-primary-600: #0058CA;
+  --color-primary-700: #00429B;
+  --color-primary-800: #00429B;
+  --color-primary-900: #001945;
+
+  /* Secondary */
+  --color-secondary-50: #EEF0FF;
+  --color-secondary-100: #BAC3FF;
+  --color-secondary-200: #DEE0FF;
+  --color-secondary-300: #96A5FF;
+  --color-secondary-400: #7689F1;
+  --color-secondary-500: #5C6FD5;
+  --color-secondary-600: #4255BB;
+  --color-secondary-700: #273CA1;
+  --color-secondary-800: #05218B;
+  --color-secondary-900: #00105B;
+
+  /* Tertiary */
+  --color-tertiary-50: #FFEBFA;
+  --color-tertiary-100: #FFD6FA;
+  --color-tertiary-200: #FFA9FE;
+  --color-tertiary-300: #E48BE6;
+  --color-tertiary-400: #C771C9;
+  --color-tertiary-500: #AA57AD;
+  --color-tertiary-600: #8E3E92;
+  --color-tertiary-700: #722479;
+  --color-tertiary-800: #580460;
+  --color-tertiary-900: #36003C;
+
+  /* Neutral */
+  --color-neutral-50: #F0F1F2;
+  --color-neutral-100: #E1E3E4;
+  --color-neutral-200: #C5C7C8;
+  --color-neutral-300: #AAABAC;
+  --color-neutral-400: #8F9192;
+  --color-neutral-500: #757778;
+  --color-neutral-600: #5C5F60;
+  --color-neutral-700: #454748;
+  --color-neutral-800: #2E3132;
+  --color-neutral-900: #191C1D;
+
+  /* Font */
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+}
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+/* sisanya tetap sama */
