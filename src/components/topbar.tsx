@@ -6,6 +6,11 @@ type TopbarProps = {
   title: string;
   subtitle?: string;
   accentColor?: "primary" | "secondary" | "tertiary";
+  user?: {
+    name: string;
+    role: string;
+    initials: string;
+  };
 };
 
 const colorMap = {
@@ -16,7 +21,6 @@ const colorMap = {
 
 export function Topbar({
   title,
-  subtitle,
   accentColor = "primary",
 }: TopbarProps) {
   const colors = colorMap[accentColor];

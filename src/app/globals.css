@@ -57,10 +57,166 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* ODONG: Neutral black baru untuk dark mode, sengaja tidak hitam pekat. */
+  --odong-black-50: #f4f7fb;
+  --odong-black-100: #e6edf5;
+  --odong-black-200: #c8d4e2;
+  --odong-black-500: #627086;
+  --odong-black-700: #263344;
+  --odong-black-800: #1a2533;
+  --odong-black-900: #111b29;
+
+  /* ODONG: Theme surface variables untuk light/dark mode tanpa mengubah token existing. */
+  --odong-page-bg: #f8fbff;
+  --odong-nav-bg: rgba(255, 255, 255, 0.88);
+  --odong-nav-border: rgba(255, 255, 255, 0.8);
+  --odong-surface: rgba(255, 255, 255, 0.82);
+  --odong-surface-strong: rgba(255, 255, 255, 0.92);
+  --odong-surface-soft: rgba(237, 240, 255, 0.72);
+  --odong-surface-muted: rgba(240, 245, 255, 0.9);
+  --odong-border: rgba(255, 255, 255, 0.8);
+  --odong-text: #191c1d;
+  --odong-muted: #5c5f60;
+  --odong-muted-soft: #8f9192;
+  --odong-grid-line: rgba(0, 88, 202, 0.065);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: var(--odong-black-900);
+  --foreground: #eef4ff;
+  --odong-page-bg: #101a28;
+  --odong-nav-bg: rgba(26, 37, 51, 0.88);
+  --odong-nav-border: rgba(176, 198, 255, 0.18);
+  --odong-surface: rgba(26, 37, 51, 0.82);
+  --odong-surface-strong: rgba(31, 44, 60, 0.94);
+  --odong-surface-soft: rgba(20, 34, 52, 0.78);
+  --odong-surface-muted: rgba(28, 42, 60, 0.9);
+  --odong-border: rgba(176, 198, 255, 0.16);
+  --odong-text: #eef4ff;
+  --odong-muted: #b6c2d4;
+  --odong-muted-soft: #8fa0b8;
+  --odong-grid-line: rgba(133, 169, 255, 0.105);
+}
+
+body {
+  background: var(--odong-page-bg);
+  color: var(--odong-text);
 }
 
 [data-radix-popper-content-wrapper] {
   z-index: 9999 !important;
+}
+
+/* ODONG: Animasi background gradient bergerak untuk halaman Beranda User. */
+.odong-beranda-gradient {
+  background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--color-primary-300) 18%, transparent), transparent 36%),
+    radial-gradient(circle at 86% 24%, color-mix(in srgb, var(--color-primary-200) 26%, transparent), transparent 34%),
+    radial-gradient(circle at 48% 88%, color-mix(in srgb, var(--color-primary-100) 34%, transparent), transparent 40%),
+    linear-gradient(135deg, #f8fbff 0%, #ffffff 46%, var(--color-primary-50) 100%);
+  background-size: 150% 150%, 140% 140%, 160% 160%, 180% 180%;
+  animation: odong-gradient-flow 18s ease-in-out infinite alternate;
+}
+
+.dark .odong-beranda-gradient {
+  background:
+    radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--color-primary-500) 16%, transparent), transparent 36%),
+    radial-gradient(circle at 86% 24%, color-mix(in srgb, var(--color-primary-400) 18%, transparent), transparent 34%),
+    radial-gradient(circle at 48% 88%, color-mix(in srgb, var(--color-primary-300) 15%, transparent), transparent 40%),
+    linear-gradient(135deg, #101a28 0%, #142033 48%, #18253a 100%);
+}
+
+/* ODONG: Grid background dibuat sedikit lebih terlihat, tapi tetap soft di belakang konten. */
+.odong-beranda-grid {
+  background-image:
+    linear-gradient(var(--odong-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--odong-grid-line) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0.72) 52%, transparent 86%);
+}
+
+/* ODONG: Reusable theme helpers untuk surface utama halaman user. */
+.odong-surface {
+  background: var(--odong-surface);
+  border-color: var(--odong-border);
+  color: var(--odong-text);
+}
+
+.odong-surface-strong {
+  background: var(--odong-surface-strong);
+  border-color: var(--odong-border);
+  color: var(--odong-text);
+}
+
+.odong-surface-soft {
+  background: var(--odong-surface-soft);
+  border-color: var(--odong-border);
+  color: var(--odong-text);
+}
+
+.odong-surface-muted {
+  background: var(--odong-surface-muted);
+  color: var(--odong-text);
+}
+
+.odong-text {
+  color: var(--odong-text);
+}
+
+.odong-muted {
+  color: var(--odong-muted);
+}
+
+.odong-muted-soft {
+  color: var(--odong-muted-soft);
+}
+
+/* ODONG: Drift halus untuk glow layer agar background terasa hidup. */
+.odong-orb-slow {
+  animation: odong-orb-drift 16s ease-in-out infinite alternate;
+}
+
+.odong-orb-medium {
+  animation: odong-orb-drift 13s ease-in-out infinite alternate-reverse;
+}
+
+.odong-orb-fast {
+  animation: odong-orb-drift 11s ease-in-out infinite alternate;
+}
+
+@keyframes odong-gradient-flow {
+  0% {
+    background-position: 0% 18%, 100% 20%, 42% 100%, 0% 50%;
+  }
+
+  50% {
+    background-position: 38% 10%, 76% 44%, 58% 82%, 74% 44%;
+  }
+
+  100% {
+    background-position: 16% 46%, 92% 10%, 24% 70%, 100% 54%;
+  }
+}
+
+@keyframes odong-orb-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(28px, -20px, 0) scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .odong-beranda-gradient,
+  .odong-orb-slow,
+  .odong-orb-medium,
+  .odong-orb-fast {
+    animation: none;
+  }
 }
 
 /* sisanya tetap sama */

@@ -1,5 +1,5 @@
-import { UserSidebar } from "@/app/user/_components/sidebar";
-import { Topbar } from "@/components/topbar";
+import { UserFooter } from "@/app/user/_components/footer";
+import { UserTopNavigation } from "@/app/user/_components/top-navigation";
 
 export default function UserLayout({
   children,
@@ -7,21 +7,12 @@ export default function UserLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-neutral-50">
-      <UserSidebar />
-      <div className="ml-64 flex-1 flex flex-col">
-        <Topbar
-          title="Beranda"
-          subtitle="Halo!!"
-          accentColor="primary"
-          user={{
-            name: "Budi Santoso",
-            role: "Pelanggan",
-            initials: "BS",
-          }}
-        />
-        <main className="flex-1 p-6">{children}</main>
+    <div className="min-h-screen bg-[var(--odong-page-bg)] text-[var(--odong-text)] transition-colors duration-300">
+      <UserTopNavigation />
+      <div className="mx-auto flex w-full max-w-[1480px] flex-col px-4 pb-8 pt-28 sm:px-6 sm:pt-32 lg:px-8">
+        <main className="flex-1">{children}</main>
       </div>
+      <UserFooter />
     </div>
   );
 }

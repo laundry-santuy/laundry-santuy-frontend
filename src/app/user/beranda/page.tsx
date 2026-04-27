@@ -1,15 +1,5 @@
-// src/app/user/beranda/page.tsx (contoh)
-"use client";
-import { usePathname } from "next/navigation";
+import { BerandaDashboard } from "@/app/user/_components/beranda/beranda-dashboard";
 
 export default function BerandaPage() {
-  const pathname = usePathname();
-  return (
-    <div className="p-4">
-      <p className="text-sm text-gray-500">
-        URL aktif: <code>{pathname}</code>
-      </p>
-      <h1 className="text-xl font-bold">Halaman Beranda</h1>
-    </div>
-  );
+  return <BerandaDashboard />;
 }

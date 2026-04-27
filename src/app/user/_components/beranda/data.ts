@@ -1,0 +1,85 @@
+import {
+  CheckCircle2,
+  Package,
+  Shirt,
+  Sparkles,
+} from "lucide-react";
+import type { ActiveOrder, Promo, RecentOrder, Reminder } from "./types";
+
+export const activeOrder: ActiveOrder = {
+  id: "#LS-004",
+  service: "Cuci + Setrika",
+  weight: "2.5 kg",
+  eta: "ETA: 2 jam",
+  steps: [
+    { label: "Diterima", icon: Package, status: "done" },
+    { label: "Dicuci", icon: Package, status: "done" },
+    { label: "Disetrika", icon: Shirt, status: "current" },
+    { label: "Selesai", icon: CheckCircle2, status: "upcoming" },
+  ],
+  courier: {
+    name: "Ahmad",
+    rating: 4.8,
+    vehicle: "Honda Beat B 1234 XY",
+    distance: "Kurir ~1.2 km dari laundry",
+  },
+};
+
+export const reminders: Reminder[] = [
+  { id: "routine", title: "Laundry Rutin", dueDate: "Rabu, 23 Oktober 2025" },
+  { id: "sheet", title: "Seprei", dueDate: "Selasa, 22 Oktober 2025" },
+  { id: "work", title: "Pakaian Kerja", dueDate: "Minggu, 20 Oktober 2025" },
+];
+
+export const recentOrders: RecentOrder[] = [
+  {
+    id: "#LS-001",
+    service: "Cuci + Setrika",
+    date: "25 Feb 2026",
+    weight: "3 kg",
+    status: "Selesai",
+  },
+  {
+    id: "#LS-002",
+    service: "Express",
+    date: "24 Feb 2026",
+    weight: "1.5 kg",
+    status: "Siap Diambil",
+  },
+  {
+    id: "#LS-003",
+    service: "Cuci + Setrika",
+    date: "25 Feb 2026",
+    weight: "3 kg",
+    status: "Selesai",
+  },
+];
+
+export const promos: Promo[] = [
+  {
+    id: "new-user",
+    eyebrow: "Promo pengguna baru",
+    title: "Diskon 20% semua layanan",
+    description: "Buat order pertama dan nikmati laundry santai tanpa antre.",
+    code: "SANTUY20",
+    validUntil: "31 Maret 2026",
+  },
+  {
+    id: "express",
+    eyebrow: "Express deal",
+    title: "Hemat Rp15.000 untuk Express",
+    description: "Cocok untuk pakaian kerja yang harus siap lebih cepat.",
+    code: "KILAT15",
+    validUntil: "15 April 2026",
+  },
+  {
+    id: "bedding",
+    eyebrow: "Bedding care",
+    title: "Gratis pickup bedding",
+    description: "Seprei dan bed cover dijemput tanpa minimum transaksi.",
+    code: "BEDDINGFREE",
+    validUntil: "30 April 2026",
+  },
+];
+
+export const promoIcon = Sparkles;
