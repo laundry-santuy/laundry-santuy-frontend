@@ -1,15 +1,5 @@
-// src/app/user/beranda/page.tsx (contoh)
-"use client";
-import { usePathname } from "next/navigation";
+import { AdminOrderManagementPage } from "@/app/admin/_components/manajemen/order-management-page";
 
 export default function PesananPage() {
-  const pathname = usePathname();
-  return (
-    <div className="p-4">
-      <p className="text-sm text-gray-500">
-        URL aktif: <code>{pathname}</code>
-      </p>
-      <h1 className="text-xl font-bold">Halaman Pesanan</h1>
-    </div>
-  );
+  return <AdminOrderManagementPage />;
 }

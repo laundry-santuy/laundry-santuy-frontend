@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Bell, Menu, Moon, Shirt, Sun, X } from "lucide-react";
+import { Bell, Menu, Moon, Shirt, Sun, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -40,6 +40,7 @@ export function UserTopNavigation() {
   const [scrolled, setScrolled] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
   const scrolledRef = useRef(false);
+  const profileActive = isActivePath(pathname, "/user/profil");
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -148,6 +149,17 @@ export function UserTopNavigation() {
             <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-primary-500" />
           </button>
           <Link
+            href="/user/profil"
+            aria-label="Profil"
+            className={cn(
+              "relative flex size-10 items-center justify-center rounded-full border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-text)] shadow-[0_3px_8px_rgba(25,28,29,0.06)] backdrop-blur-md transition duration-300 hover:border-primary-100 hover:text-primary-600",
+              profileActive &&
+                "border-primary-100 bg-primary-50 text-primary-600",
+            )}
+          >
+            <UserRound className="size-4" />
+          </Link>
+          <Link
             href="/auth/login/user"
             className="text-sm font-medium text-primary-600 transition duration-300 hover:text-primary-700"
           >
@@ -180,6 +192,17 @@ export function UserTopNavigation() {
             <Bell className="size-4" />
             <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-primary-500" />
           </button>
+          <Link
+            href="/user/profil"
+            aria-label="Profil"
+            className={cn(
+              "relative flex size-10 items-center justify-center rounded-full border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-text)] shadow-[0_3px_8px_rgba(25,28,29,0.06)] backdrop-blur-md transition duration-300 hover:border-primary-100 hover:text-primary-600",
+              profileActive &&
+                "border-primary-100 bg-primary-50 text-primary-600",
+            )}
+          >
+            <UserRound className="size-4" />
+          </Link>
           <button
             type="button"
             aria-label={open ? "Tutup menu" : "Buka menu"}

@@ -1,15 +1,28 @@
-// src/app/user/beranda/page.tsx (contoh)
-"use client";
-import { usePathname } from "next/navigation";
+import {
+  AdminDashboardPage,
+  type DashboardStatus,
+} from "@/app/admin/_components/dashboard/dashboard-page";
 
-export default function DashboardPage() {
-  const pathname = usePathname();
-  return (
-    <div className="p-4">
-      <p className="text-sm text-gray-500">
-        URL aktif: <code>{pathname}</code>
-      </p>
-      <h1 className="text-xl font-bold">Halaman Dashboard</h1>
-    </div>
-  );
+type DashboardPageProps = {
+  searchParams?: Promise<{
+    state?: string | string[];
+  }>;
+};
+
+function parseDashboardStatus(state?: string | string[]): DashboardStatus {
+  const value = Array.isArray(state) ? state[0] : state;
+
+  if (value === "loading" || value === "empty" || value === "error") {
+    return value;
+  }
+
+  return "ready";
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: DashboardPageProps) {
+  const params = await searchParams;
+
+  return <AdminDashboardPage status={parseDashboardStatus(params?.state)} />;
 }

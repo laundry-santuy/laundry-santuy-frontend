@@ -1,0 +1,207 @@
+import {
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  Package,
+  ShieldCheck,
+  Shirt,
+  Sparkles,
+  Truck,
+  Wallet,
+} from "lucide-react";
+import type { TrackingCheckpoint, TrackingInsight, TrackingOrder } from "./types";
+
+export const trackingOrders: TrackingOrder[] = [
+  {
+    id: "#LS-004",
+    service: "Cuci + Setrika",
+    statusLabel: "Sedang disetrika",
+    statusDescription:
+      "Pakaian kamu sudah selesai dicuci dan sedang masuk tahap setrika rapi sebelum quality check.",
+    tone: "active",
+    eta: "2 jam lagi",
+    progress: 72,
+    updatedAt: "Diperbarui 5 menit lalu",
+    weight: "2.5 kg",
+    total: "Rp34.000",
+    pickupWindow: "Hari ini, 14.00 - 16.00",
+    outlet: "Santuy Kemang",
+    payment: "E-wallet",
+    pickup: {
+      label: "Rumah",
+      address: "Jl. Melati Raya No. 24, Jakarta Selatan",
+      note: "Titip ke satpam kalau belum di rumah.",
+    },
+    dropoff: {
+      label: "Alamat kembali",
+      address: "Jl. Melati Raya No. 24, Jakarta Selatan",
+      note: "Kurir akan menghubungi sebelum tiba.",
+    },
+    courier: {
+      name: "Ahmad",
+      avatar: "AH",
+      rating: 4.8,
+      vehicle: "Honda Beat B 1234 XY",
+      distance: "1.2 km dari outlet",
+      responseTime: "Biasanya membalas < 3 menit",
+    },
+    timeline: [
+      {
+        id: "pickup",
+        title: "Pickup selesai",
+        description: "Kurir mengambil pakaian dari alamat utama.",
+        time: "10.20",
+        status: "done",
+        icon: Truck,
+      },
+      {
+        id: "received",
+        title: "Diterima outlet",
+        description: "Cucian masuk ke antrean Santuy Kemang.",
+        time: "10.55",
+        status: "done",
+        icon: Package,
+      },
+      {
+        id: "wash",
+        title: "Dicuci dan dikeringkan",
+        description: "Pakaian dipisah warna lalu dicuci sesuai layanan.",
+        time: "12.40",
+        status: "done",
+        icon: Sparkles,
+      },
+      {
+        id: "iron",
+        title: "Sedang disetrika",
+        description: "Tahap rapi akhir sebelum masuk pengecekan kualitas.",
+        time: "Sekarang",
+        status: "current",
+        icon: Shirt,
+      },
+      {
+        id: "deliver",
+        title: "Diantar kembali",
+        description: "Kurir mengantar pakaian bersih ke alamat kamu.",
+        time: "Estimasi 17.30",
+        status: "upcoming",
+        icon: MapPin,
+      },
+    ],
+  },
+  {
+    id: "#LS-005",
+    service: "Express",
+    statusLabel: "Kurir menuju pickup",
+    statusDescription:
+      "Order express sudah diterima outlet. Kurir sedang bersiap menuju alamat pickup.",
+    tone: "scheduled",
+    eta: "38 menit lagi",
+    progress: 28,
+    updatedAt: "Diperbarui 2 menit lalu",
+    weight: "1.5 kg",
+    total: "Rp27.000",
+    pickupWindow: "Hari ini, 18.00 - 20.00",
+    outlet: "Santuy Kemang",
+    payment: "Tunai",
+    pickup: {
+      label: "Kampus",
+      address: "Gedung Teknik, pintu lobby utama",
+      note: "Hubungi saat kurir sudah sampai.",
+    },
+    dropoff: {
+      label: "Rumah",
+      address: "Jl. Melati Raya No. 24, Jakarta Selatan",
+      note: "Diantar setelah express selesai diproses.",
+    },
+    courier: {
+      name: "Nadia",
+      avatar: "NA",
+      rating: 4.9,
+      vehicle: "Yamaha Fazzio B 9876 KJ",
+      distance: "2.4 km dari alamat pickup",
+      responseTime: "Biasanya membalas < 5 menit",
+    },
+    timeline: [
+      {
+        id: "created",
+        title: "Order dibuat",
+        description: "Detail layanan express sudah dikirim ke outlet.",
+        time: "17.05",
+        status: "done",
+        icon: CheckCircle2,
+      },
+      {
+        id: "assigned",
+        title: "Kurir ditugaskan",
+        description: "Kurir menerima rute pickup dan detail alamat.",
+        time: "17.10",
+        status: "done",
+        icon: Truck,
+      },
+      {
+        id: "pickup-route",
+        title: "Menuju pickup",
+        description: "Kurir bergerak ke titik jemput pesanan express.",
+        time: "Sekarang",
+        status: "current",
+        icon: MapPin,
+      },
+      {
+        id: "process",
+        title: "Diproses express",
+        description: "Cucian masuk antrean prioritas setelah tiba di outlet.",
+        time: "Estimasi 18.20",
+        status: "upcoming",
+        icon: Sparkles,
+      },
+      {
+        id: "finish",
+        title: "Siap dikirim",
+        description: "Pakaian selesai dan dikirim kembali pada hari yang sama.",
+        time: "Estimasi 21.30",
+        status: "upcoming",
+        icon: CheckCircle2,
+      },
+    ],
+  },
+];
+
+export const trackingInsights: TrackingInsight[] = [
+  {
+    label: "Pickup",
+    value: "Tepat jadwal",
+    description: "Kurir datang sesuai slot yang dipilih.",
+    icon: CalendarClock,
+  },
+  {
+    label: "Proteksi",
+    value: "Terverifikasi",
+    description: "Setiap tahap punya catatan status.",
+    icon: ShieldCheck,
+  },
+  {
+    label: "Pembayaran",
+    value: "Transparan",
+    description: "Total final terlihat sebelum selesai.",
+    icon: Wallet,
+  },
+];
+
+export const trackingCheckpoints: TrackingCheckpoint[] = [
+  {
+    title: "Foto pickup tersimpan",
+    description: "Bukti serah terima disimpan pada order aktif.",
+    icon: CheckCircle2,
+  },
+  {
+    title: "Estimasi tetap diperbarui",
+    description: "ETA berubah mengikuti antrean dan rute kurir.",
+    icon: Clock,
+  },
+  {
+    title: "Laundry dipisah per order",
+    description: "Label order dipakai dari pickup sampai kembali.",
+    icon: Package,
+  },
+];

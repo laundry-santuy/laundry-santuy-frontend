@@ -59,12 +59,18 @@ export function OrderErrorState() {
   );
 }
 
-export function OrderEmptyState() {
+export function OrderEmptyState({
+  title = "Layanan belum tersedia",
+  description = "Daftar layanan akan muncul di sini setelah outlet Laundry Santuy aktif menerima order.",
+}: {
+  title?: string;
+  description?: string;
+}) {
   return (
     <OrderStateCard
       icon={Inbox}
-      title="Layanan belum tersedia"
-      description="Daftar layanan akan muncul di sini setelah outlet Laundry Santuy aktif menerima order."
+      title={title}
+      description={description}
     />
   );
 }

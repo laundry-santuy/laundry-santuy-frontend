@@ -4,7 +4,7 @@ import {
   Shirt,
   Sparkles,
 } from "lucide-react";
-import type { ActiveOrder, Promo, RecentOrder, Reminder } from "./types";
+import type { ActiveOrder, RecentOrder, Reminder } from "./types";
 
 export const activeOrder: ActiveOrder = {
   id: "#LS-004",
@@ -52,33 +52,6 @@ export const recentOrders: RecentOrder[] = [
     date: "25 Feb 2026",
     weight: "3 kg",
     status: "Selesai",
-  },
-];
-
-export const promos: Promo[] = [
-  {
-    id: "new-user",
-    eyebrow: "Promo pengguna baru",
-    title: "Diskon 20% semua layanan",
-    description: "Buat order pertama dan nikmati laundry santai tanpa antre.",
-    code: "SANTUY20",
-    validUntil: "31 Maret 2026",
-  },
-  {
-    id: "express",
-    eyebrow: "Express deal",
-    title: "Hemat Rp15.000 untuk Express",
-    description: "Cocok untuk pakaian kerja yang harus siap lebih cepat.",
-    code: "KILAT15",
-    validUntil: "15 April 2026",
-  },
-  {
-    id: "bedding",
-    eyebrow: "Bedding care",
-    title: "Gratis pickup bedding",
-    description: "Seprei dan bed cover dijemput tanpa minimum transaksi.",
-    code: "BEDDINGFREE",
-    validUntil: "30 April 2026",
   },
 ];
 
