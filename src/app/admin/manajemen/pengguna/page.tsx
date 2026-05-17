@@ -1,15 +1,5 @@
-// src/app/user/beranda/page.tsx (contoh)
-"use client";
-import { usePathname } from "next/navigation";
+import { AdminUserManagementPage } from "@/app/admin/_components/manajemen/user-management-page";
 
 export default function PenggunaPage() {
-  const pathname = usePathname();
-  return (
-    <div className="p-4">
-      <p className="text-sm text-gray-500">
-        URL aktif: <code>{pathname}</code>
-      </p>
-      <h1 className="text-xl font-bold">Halaman Pengguna</h1>
-    </div>
-  );
+  return <AdminUserManagementPage />;
 }

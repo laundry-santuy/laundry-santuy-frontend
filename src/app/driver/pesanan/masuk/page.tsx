@@ -1,15 +1,5 @@
-// src/app/user/beranda/page.tsx (contoh)
-"use client";
-import { usePathname } from "next/navigation";
+import { IncomingOrdersPage } from "@/app/driver/_components/pesanan-masuk/incoming-orders-page";
 
 export default function PesananMasukPage() {
-  const pathname = usePathname();
-  return (
-    <div className="p-4">
-      <p className="text-sm text-gray-500">
-        URL aktif: <code>{pathname}</code>
-      </p>
-      <h1 className="text-xl font-bold">Halaman Pesanan Masuk</h1>
-    </div>
-  );
+  return <IncomingOrdersPage />;
 }

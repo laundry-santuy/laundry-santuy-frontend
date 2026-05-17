@@ -1,0 +1,176 @@
+import {
+  BadgePercent,
+  CheckCircle2,
+  Clock,
+  Package,
+  ReceiptText,
+  Shirt,
+  Sparkles,
+  Truck,
+  Wallet,
+  XCircle,
+} from "lucide-react";
+import type { HistoryFilter, HistoryMetric, HistoryOrder } from "./types";
+
+export const historyFilters: HistoryFilter[] = [
+  "Semua",
+  "Selesai",
+  "Siap Diambil",
+  "Diproses",
+  "Dibatalkan",
+];
+
+export const historyMetrics: HistoryMetric[] = [
+  {
+    label: "Total order",
+    value: "18x",
+    description: "Transaksi laundry tahun ini.",
+    icon: ReceiptText,
+  },
+  {
+    label: "Selesai",
+    value: "14",
+    description: "Order berhasil dikirim kembali.",
+    icon: CheckCircle2,
+  },
+  {
+    label: "Hemat promo",
+    value: "Rp86rb",
+    description: "Akumulasi potongan dari voucher.",
+    icon: BadgePercent,
+  },
+  {
+    label: "Pembayaran",
+    value: "100%",
+    description: "Order aktif sudah tercatat.",
+    icon: Wallet,
+  },
+];
+
+export const historyOrders: HistoryOrder[] = [
+  {
+    id: "#LS-004",
+    service: "Cuci + Setrika",
+    status: "Diproses",
+    date: "28 Apr 2026",
+    time: "14.00 - 16.00",
+    weight: "2.5 kg",
+    total: "Rp34.000",
+    subtotal: "Rp37.000",
+    discount: "-Rp3.000",
+    paymentMethod: "E-wallet",
+    paymentStatus: "Menunggu",
+    outlet: "Santuy Kemang",
+    address: "Jl. Melati Raya No. 24, Jakarta Selatan",
+    courier: "Ahmad",
+    note: "Sedang masuk tahap setrika rapi sebelum quality check.",
+    items: [
+      { name: "Cuci + Setrika", quantity: "2.5 kg", price: "Rp25.000" },
+      { name: "Pewangi premium", quantity: "1x", price: "Rp3.000" },
+      { name: "Pickup", quantity: "1 rute", price: "Rp6.000" },
+    ],
+  },
+  {
+    id: "#LS-003",
+    service: "Cuci + Setrika",
+    status: "Selesai",
+    date: "25 Feb 2026",
+    time: "09.00 - 11.00",
+    weight: "3 kg",
+    total: "Rp30.000",
+    subtotal: "Rp38.000",
+    discount: "-Rp8.000",
+    paymentMethod: "E-wallet",
+    paymentStatus: "Lunas",
+    outlet: "Santuy Kemang",
+    address: "Jl. Melati Raya No. 24, Jakarta Selatan",
+    courier: "Ahmad",
+    rating: 5,
+    note: "Pakaian selesai, dikirim kembali, dan diterima pelanggan.",
+    items: [
+      { name: "Cuci + Setrika", quantity: "3 kg", price: "Rp30.000" },
+      { name: "Voucher SANTUY20", quantity: "1x", price: "-Rp8.000" },
+      { name: "Pickup", quantity: "Gratis", price: "Rp0" },
+    ],
+  },
+  {
+    id: "#LS-002",
+    service: "Express",
+    status: "Siap Diambil",
+    date: "24 Feb 2026",
+    time: "18.00 - 20.00",
+    weight: "1.5 kg",
+    total: "Rp27.000",
+    subtotal: "Rp27.000",
+    discount: "Rp0",
+    paymentMethod: "Tunai",
+    paymentStatus: "Menunggu",
+    outlet: "Santuy Kemang",
+    address: "Gedung Teknik, pintu lobby utama",
+    courier: "Nadia",
+    note: "Order express selesai dan menunggu pengantaran kembali.",
+    items: [
+      { name: "Express", quantity: "1.5 kg", price: "Rp27.000" },
+      { name: "Anti noda", quantity: "Included", price: "Rp0" },
+    ],
+  },
+  {
+    id: "#LS-001",
+    service: "Bedding Care",
+    status: "Selesai",
+    date: "18 Feb 2026",
+    time: "10.00 - 12.00",
+    weight: "2 item",
+    total: "Rp50.000",
+    subtotal: "Rp58.000",
+    discount: "-Rp8.000",
+    paymentMethod: "Kartu",
+    paymentStatus: "Lunas",
+    outlet: "Santuy Cipete",
+    address: "Jl. Melati Raya No. 24, Jakarta Selatan",
+    courier: "Raka",
+    rating: 4.8,
+    note: "Seprai dan bed cover selesai dicuci higienis.",
+    items: [
+      { name: "Bedding Care", quantity: "2 item", price: "Rp50.000" },
+      { name: "Pickup bedding", quantity: "Gratis", price: "Rp0" },
+    ],
+  },
+  {
+    id: "#LS-000",
+    service: "Cuci Kiloan",
+    status: "Dibatalkan",
+    date: "12 Feb 2026",
+    time: "13.00 - 15.00",
+    weight: "2 kg",
+    total: "Rp0",
+    subtotal: "Rp14.000",
+    discount: "Refund",
+    paymentMethod: "E-wallet",
+    paymentStatus: "Refund",
+    outlet: "Santuy Kemang",
+    address: "Jl. Melati Raya No. 24, Jakarta Selatan",
+    courier: "Belum ditugaskan",
+    note: "Order dibatalkan sebelum pickup karena jadwal berubah.",
+    items: [
+      { name: "Cuci Kiloan", quantity: "2 kg", price: "Rp14.000" },
+      { name: "Refund", quantity: "Diproses", price: "-Rp14.000" },
+    ],
+  },
+];
+
+export const historyStatusIcon = {
+  Selesai: CheckCircle2,
+  "Siap Diambil": Package,
+  Diproses: Clock,
+  Dibatalkan: XCircle,
+} as const;
+
+export const historyServiceIcon = {
+  "Cuci Kiloan": Shirt,
+  "Cuci + Setrika": Sparkles,
+  Express: Clock,
+  "Bedding Care": Package,
+} as const;
+
+export const historyCourierIcon = Truck;

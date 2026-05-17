@@ -17,7 +17,6 @@ import {
   addressOptions,
   paymentOptions,
   pickupSlots,
-  serviceOptions,
 } from "./data";
 import { OrderDetailsPanel } from "./order-details-panel";
 import { OrderServiceGrid } from "./order-service-grid";
@@ -28,6 +27,8 @@ import {
   OrderLoadingState,
 } from "./order-states";
 import type { OrderPageStatus } from "./types";
+import { useOutletServices } from "@/hooks/use-outlet-services";
+import { getOutletServiceIcon } from "@/lib/outlet-services";
 
 type PesanOrderPageProps = {
   status?: OrderPageStatus;
@@ -39,14 +40,45 @@ const commandStats = [
   { value: "Real-time", label: "Update status", icon: ShieldCheck },
 ];
 
+function clampQuantity(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
 export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
-  const [selectedServiceId, setSelectedServiceId] = useState(
-    serviceOptions[1]?.id ?? "",
+  const { services: outletServices } = useOutletServices();
+  const serviceOptions = useMemo(
+    () =>
+      outletServices
+        .filter((service) => service.active)
+        .map((service) => ({
+          id: service.id,
+          name: service.name,
+          description: service.description,
+          price: service.price,
+          unit: service.unit,
+          eta: service.eta,
+          badge: service.badge,
+          minQuantity: service.minQuantity,
+          maxQuantity: service.maxQuantity,
+          step: service.step,
+          icon: getOutletServiceIcon(service.iconKey),
+        })),
+    [outletServices],
   );
+  const [selectedServiceId, setSelectedServiceId] = useState("");
   const selectedService =
     serviceOptions.find((service) => service.id === selectedServiceId) ??
+    serviceOptions[1] ??
     serviceOptions[0];
-  const [quantity, setQuantity] = useState(selectedService?.minQuantity ?? 1);
+  const displayedServiceId = selectedService?.id ?? "";
+  const [quantity, setQuantity] = useState(1);
+  const effectiveQuantity = selectedService
+    ? clampQuantity(
+        quantity,
+        selectedService.minQuantity,
+        selectedService.maxQuantity,
+      )
+    : quantity;
   const [selectedSlotId, setSelectedSlotId] = useState(
     pickupSlots[0]?.id ?? "",
   );
@@ -78,7 +110,7 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
       return { subtotal: 0, pickupFee: 0, discount: 0, total: 0 };
     }
 
-    const serviceTotal = selectedService.price * quantity;
+    const serviceTotal = selectedService.price * effectiveQuantity;
     const addOnTotal = selectedAddOns.reduce(
       (total, addOn) => total + addOn.price,
       0,
@@ -89,7 +121,7 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
     const total = Math.max(subtotal + pickupFee - discount, 0);
 
     return { subtotal, pickupFee, discount, total };
-  }, [quantity, selectedAddOns, selectedService]);
+  }, [effectiveQuantity, selectedAddOns, selectedService]);
 
   if (status === "loading") {
     return <OrderLoadingState />;
@@ -99,6 +131,15 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
     return <OrderErrorState />;
   }
 
+  if (serviceOptions.length === 0) {
+    return (
+      <OrderEmptyState
+        title="Layanan outlet belum aktif"
+        description="Admin outlet belum menyalakan layanan yang bisa dipesan. Coba lagi setelah layanan diaktifkan."
+      />
+    );
+  }
+
   if (status === "empty" || !selectedService) {
     return <OrderEmptyState />;
   }
@@ -106,7 +147,9 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
   const canSubmit = Boolean(selectedService && selectedSlot && selectedAddress);
 
   const handleSelectService = (serviceId: string) => {
-    const nextService = serviceOptions.find((service) => service.id === serviceId);
+    const nextService = serviceOptions.find(
+      (service) => service.id === serviceId,
+    );
 
     if (!nextService) {
       return;
@@ -129,6 +172,34 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitted(true);
+  };
+
+  const handleDecreaseQuantity = () => {
+    setQuantity((currentQuantity) =>
+      Math.max(
+        selectedService.minQuantity,
+        clampQuantity(
+          currentQuantity,
+          selectedService.minQuantity,
+          selectedService.maxQuantity,
+        ) - selectedService.step,
+      ),
+    );
+    setSubmitted(false);
+  };
+
+  const handleIncreaseQuantity = () => {
+    setQuantity((currentQuantity) =>
+      Math.min(
+        selectedService.maxQuantity,
+        clampQuantity(
+          currentQuantity,
+          selectedService.minQuantity,
+          selectedService.maxQuantity,
+        ) + selectedService.step,
+      ),
+    );
+    setSubmitted(false);
   };
 
   return (
@@ -289,36 +360,20 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
             >
               <OrderServiceGrid
                 services={serviceOptions}
-                selectedServiceId={selectedServiceId}
+                selectedServiceId={displayedServiceId}
                 onSelectService={handleSelectService}
               />
               <OrderDetailsPanel
                 service={selectedService}
-                quantity={quantity}
+                quantity={effectiveQuantity}
                 selectedSlotId={selectedSlotId}
                 selectedAddressId={selectedAddressId}
                 selectedAddOnIds={selectedAddOnIds}
                 slots={pickupSlots}
                 addresses={addressOptions}
                 addOns={addOnOptions}
-                onDecreaseQuantity={() => {
-                  setQuantity((currentQuantity) =>
-                    Math.max(
-                      selectedService.minQuantity,
-                      currentQuantity - selectedService.step,
-                    ),
-                  );
-                  setSubmitted(false);
-                }}
-                onIncreaseQuantity={() => {
-                  setQuantity((currentQuantity) =>
-                    Math.min(
-                      selectedService.maxQuantity,
-                      currentQuantity + selectedService.step,
-                    ),
-                  );
-                  setSubmitted(false);
-                }}
+                onDecreaseQuantity={handleDecreaseQuantity}
+                onIncreaseQuantity={handleIncreaseQuantity}
                 onSelectSlot={(slotId) => {
                   setSelectedSlotId(slotId);
                   setSubmitted(false);
@@ -369,7 +424,7 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
 
           <OrderSummary
             service={selectedService}
-            quantity={quantity}
+            quantity={effectiveQuantity}
             slot={selectedSlot}
             address={selectedAddress}
             payment={selectedPayment}

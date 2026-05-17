@@ -1,15 +1,5 @@
-// src/app/user/beranda/page.tsx (contoh)
-"use client";
-import { usePathname } from "next/navigation";
+import { AdminProfilePage } from "@/app/admin/_components/profil/profile-page";
 
 export default function ProfilPage() {
-  const pathname = usePathname();
-  return (
-    <div className="p-4">
-      <p className="text-sm text-gray-500">
-        URL aktif: <code>{pathname}</code>
-      </p>
-      <h1 className="text-xl font-bold">Halaman Profil</h1>
-    </div>
-  );
+  return <AdminProfilePage />;
 }
