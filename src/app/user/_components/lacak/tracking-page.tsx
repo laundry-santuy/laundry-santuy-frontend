@@ -1,11 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  trackingCheckpoints,
-  trackingInsights,
-  trackingOrders,
-} from "./data";
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  Package,
+  ShieldCheck,
+  Shirt,
+  Sparkles,
+  Truck,
+  Wallet,
+} from "lucide-react";
+import {
+  fetchLacak,
+  formatRupiah,
+  formatWaktu,
+  type LacakResponse,
+} from "@/lib/user-api";
 import { TrackingHero } from "./tracking-hero";
 import { TrackingOrderSwitcher } from "./tracking-order-switcher";
 import { TrackingSidePanel } from "./tracking-side-panel";
@@ -15,35 +28,154 @@ import {
   TrackingLoadingState,
 } from "./tracking-states";
 import { TrackingTimeline } from "./tracking-timeline";
-import type { TrackingPageStatus } from "./types";
+import type {
+  TrackingCheckpoint,
+  TrackingInsight,
+  TrackingOrder,
+  TrackingPageStatus,
+  TrackingStep,
+  TrackingStepStatus,
+} from "./types";
 
 type TrackingPageProps = {
   status?: TrackingPageStatus;
 };
 
-export function TrackingPage({ status = "ready" }: TrackingPageProps) {
-  const [selectedOrderId, setSelectedOrderId] = useState(
-    trackingOrders[0]?.id ?? "",
+const STEP_ICONS = [Truck, Package, Sparkles, Shirt, MapPin, CheckCircle2] as const;
+
+const STATIC_INSIGHTS: TrackingInsight[] = [
+  {
+    label: "Pickup",
+    value: "Tepat jadwal",
+    description: "Kurir datang sesuai slot yang dipilih.",
+    icon: CalendarClock,
+  },
+  {
+    label: "Proteksi",
+    value: "Terverifikasi",
+    description: "Setiap tahap punya catatan status.",
+    icon: ShieldCheck,
+  },
+  {
+    label: "Pembayaran",
+    value: "Transparan",
+    description: "Total final terlihat sebelum selesai.",
+    icon: Wallet,
+  },
+];
+
+const STATIC_CHECKPOINTS: TrackingCheckpoint[] = [
+  {
+    title: "Foto pickup tersimpan",
+    description: "Bukti serah terima disimpan pada order aktif.",
+    icon: CheckCircle2,
+  },
+  {
+    title: "Estimasi tetap diperbarui",
+    description: "ETA berubah mengikuti antrean dan rute kurir.",
+    icon: Clock,
+  },
+  {
+    title: "Laundry dipisah per order",
+    description: "Label order dipakai dari pickup sampai kembali.",
+    icon: Package,
+  },
+];
+
+function buildTimeline(
+  steps: LacakResponse["statusPerjalanan"],
+): TrackingStep[] {
+  let foundCurrent = false;
+  return steps.map((step, idx) => {
+    const icon = STEP_ICONS[idx] ?? Package;
+    let status: TrackingStepStatus;
+    if (step.completed) {
+      status = "done";
+    } else if (step.active || !foundCurrent) {
+      foundCurrent = true;
+      status = "current";
+    } else {
+      status = "upcoming";
+    }
+    if (!step.completed && !step.active && foundCurrent && status !== "current") {
+      status = "upcoming";
+    }
+    return {
+      id: `step-${idx}`,
+      title: step.label,
+      description: step.sublabel,
+      time: step.time,
+      status,
+      icon,
+    };
+  });
+}
+
+function mapToTrackingOrder(data: LacakResponse): TrackingOrder {
+  const detail = data.detailPesanan ?? data.pesananAktif;
+  const kurir  = data.infoKurir;
+  const alamat = data.alamatPenjemputan;
+  const peta   = data.petaTracking;
+
+  return {
+    id: detail?.kodePesanan ?? "-",
+    service: detail?.namaLayanan ?? "Layanan",
+    statusLabel: detail?.status ?? "menunggu",
+    statusDescription: "Status pesanan kamu diperbarui secara real-time.",
+    tone: "active",
+    eta: peta ? `${peta.estimasiTibaMenit} menit` : "-",
+    progress: 50,
+    updatedAt: `Diperbarui baru saja`,
+    weight: `${detail?.berat ?? 0} kg`,
+    total: formatRupiah(detail?.total ?? 0),
+    pickupWindow: detail ? formatWaktu(detail.waktu) : "-",
+    outlet: "-",
+    payment: "-",
+    pickup: {
+      label: alamat?.label ?? "Rumah",
+      address: alamat?.alamat ?? "Alamat belum diatur",
+      note: "Kurir akan menghubungi sebelum tiba.",
+    },
+    dropoff: {
+      label: "Alamat kembali",
+      address: alamat?.alamat ?? "Alamat belum diatur",
+      note: "Pakaian bersih dikembalikan ke alamat yang sama.",
+    },
+    courier: {
+      name: kurir?.nama ?? "Kurir",
+      avatar: kurir?.inisial ?? "KR",
+      rating: kurir?.rating ?? 4.8,
+      vehicle: kurir?.kendaraan ?? "-",
+      distance: peta ? `${peta.jarakKm.toFixed(1)} km dari outlet` : "-",
+      responseTime: "Biasanya membalas < 5 menit",
+    },
+    timeline: buildTimeline(data.statusPerjalanan),
+  };
+}
+
+export function TrackingPage({ status: propStatus = "ready" }: TrackingPageProps) {
+  const [pageStatus, setPageStatus] = useState<TrackingPageStatus>("loading");
+  const [apiData, setApiData] = useState<LacakResponse | null>(null);
+
+  useEffect(() => {
+    fetchLacak()
+      .then((data) => {
+        setApiData(data);
+        setPageStatus(data.detailPesanan || data.pesananAktif ? "ready" : "empty");
+      })
+      .catch(() => setPageStatus("error"));
+  }, []);
+
+  const trackingOrder = useMemo(
+    () => (apiData ? mapToTrackingOrder(apiData) : null),
+    [apiData],
   );
 
-  const selectedOrder = useMemo(
-    () =>
-      trackingOrders.find((order) => order.id === selectedOrderId) ??
-      trackingOrders[0],
-    [selectedOrderId],
-  );
+  const effectiveStatus = propStatus !== "ready" ? propStatus : pageStatus;
 
-  if (status === "loading") {
-    return <TrackingLoadingState />;
-  }
-
-  if (status === "error") {
-    return <TrackingErrorState />;
-  }
-
-  if (status === "empty" || !selectedOrder) {
-    return <TrackingEmptyState />;
-  }
+  if (effectiveStatus === "loading") return <TrackingLoadingState />;
+  if (effectiveStatus === "error")   return <TrackingErrorState />;
+  if (effectiveStatus === "empty" || !trackingOrder) return <TrackingEmptyState />;
 
   return (
     <div className="relative mx-auto min-h-screen w-full max-w-[1440px]">
@@ -52,28 +184,23 @@ export function TrackingPage({ status = "ready" }: TrackingPageProps) {
       </div>
 
       <div className="relative z-10 space-y-5">
-        <TrackingHero order={selectedOrder} insights={trackingInsights} />
+        <TrackingHero order={trackingOrder} insights={STATIC_INSIGHTS} />
 
         <TrackingOrderSwitcher
-          orders={trackingOrders}
-          selectedOrderId={selectedOrder.id}
-          onSelectOrder={setSelectedOrderId}
+          orders={[trackingOrder]}
+          selectedOrderId={trackingOrder.id}
+          onSelectOrder={() => {}}
         />
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-stretch 2xl:grid-cols-[minmax(0,1fr)_420px]">
           <div className="min-w-0">
-            <TrackingTimeline steps={selectedOrder.timeline} />
+            <TrackingTimeline steps={trackingOrder.timeline} />
           </div>
-
-          <TrackingSidePanel
-            order={selectedOrder}
-            checkpoints={trackingCheckpoints}
-          />
+          <TrackingSidePanel order={trackingOrder} checkpoints={STATIC_CHECKPOINTS} />
         </div>
 
         <span className="sr-only" aria-live="polite">
-          Order yang sedang dilacak: {selectedOrder.id},{" "}
-          {selectedOrder.statusLabel}.
+          Order yang sedang dilacak: {trackingOrder.id}, {trackingOrder.statusLabel}.
         </span>
       </div>
     </div>

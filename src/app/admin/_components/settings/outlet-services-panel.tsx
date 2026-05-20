@@ -1,26 +1,39 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  AlertCircle,
   PencilLine,
   Plus,
+  RefreshCw,
   Save,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
-  createOutletServiceId,
   getOutletServiceIcon,
   outletServiceIconOptions,
   suggestOutletServiceIconKey,
-  type OutletService,
   type OutletServiceIconKey,
 } from "@/lib/outlet-services";
-import { AdminDialog } from "../admin-dialog";
+import { ApiError } from "@/lib/api-client";
 import {
-  AdminIconButton,
-} from "../admin-table-tools";
+  backendToOutletService,
+  createLayanan,
+  deleteLayanan,
+  fetchPengaturanOutlet,
+  loadServiceMeta,
+  removeServiceMeta,
+  syncServicesToLocalStorage,
+  updateLayanan,
+  upsertServiceMeta,
+  type LayananBackend,
+  type ServiceMeta,
+} from "@/lib/admin-api";
+import { AdminDialog } from "../admin-dialog";
+import { AdminIconButton } from "../admin-table-tools";
 import {
   AdminPanel,
   adminControlClass,
@@ -29,13 +42,9 @@ import {
   adminSelectClass,
 } from "../admin-page";
 
-type OutletServicesPanelProps = {
-  services: OutletService[];
-  onChange: (services: OutletService[]) => void;
-};
+// ── Draft types ───────────────────────────────────────────────────────────────
 
 type ServiceDraft = {
-  id: string | null;
   name: string;
   description: string;
   price: string;
@@ -49,6 +58,43 @@ type ServiceDraft = {
   active: boolean;
 };
 
+function emptyDraft(): ServiceDraft {
+  return {
+    name: "",
+    description: "Tambahkan deskripsi singkat untuk layanan ini.",
+    price: "7000",
+    unit: "kg",
+    eta: "2 hari",
+    badge: "KILOAN",
+    minQuantity: "1",
+    maxQuantity: "12",
+    step: "0.5",
+    iconKey: "shirt",
+    active: true,
+  };
+}
+
+function draftFromBackend(
+  layanan: LayananBackend,
+  meta?: ServiceMeta,
+): ServiceDraft {
+  return {
+    name: layanan.namaLayanan,
+    description: meta?.description ?? "Layanan laundry berkualitas.",
+    price: String(layanan.harga),
+    unit: layanan.satuan,
+    eta: layanan.durasi || "2 hari",
+    badge: layanan.tipe,
+    minQuantity: String(meta?.minQuantity ?? 1),
+    maxQuantity: String(meta?.maxQuantity ?? 12),
+    step: String(meta?.step ?? 0.5),
+    iconKey: meta?.iconKey ?? suggestOutletServiceIconKey(layanan.namaLayanan),
+    active: layanan.isActive,
+  };
+}
+
+// ── Small form field components ───────────────────────────────────────────────
+
 function FieldPencil({ multiline = false }: { multiline?: boolean }) {
   return (
     <PencilLine
@@ -59,34 +105,6 @@ function FieldPencil({ multiline = false }: { multiline?: boolean }) {
       aria-hidden="true"
     />
   );
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function createDraft(service?: OutletService): ServiceDraft {
-  return {
-    id: service?.id ?? null,
-    name: service?.name ?? "",
-    description:
-      service?.description ?? "Tambahkan deskripsi singkat untuk layanan ini.",
-    price: service ? String(service.price) : "7000",
-    unit: service?.unit ?? "kg",
-    eta: service?.eta ?? "2 hari",
-    badge: service?.badge ?? "Baru",
-    minQuantity: service ? String(service.minQuantity) : "1",
-    maxQuantity: service ? String(service.maxQuantity) : "12",
-    step: service ? String(service.step) : "0.5",
-    iconKey:
-      service?.iconKey ??
-      suggestOutletServiceIconKey(service?.name ?? "Layanan Baru"),
-    active: service?.active ?? true,
-  };
 }
 
 function FieldLabel({
@@ -125,7 +143,7 @@ function TextField({
 }: {
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (v: string) => void;
   helper?: string;
   type?: string;
   className?: string;
@@ -139,7 +157,7 @@ function TextField({
           min={type === "number" ? "0" : undefined}
           step={type === "number" ? "any" : undefined}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           className={cn(adminControlClass, "pr-12")}
         />
         <FieldPencil />
@@ -157,7 +175,7 @@ function TextareaField({
 }: {
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (v: string) => void;
   helper?: string;
   className?: string;
 }) {
@@ -166,7 +184,7 @@ function TextareaField({
       <span className="relative block">
         <textarea
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           className={cn(adminControlClass, "h-28 resize-none py-3 pr-12")}
         />
         <FieldPencil multiline />
@@ -185,8 +203,8 @@ function SelectField({
 }: {
   label: string;
   value: string;
-  options: Array<{ value: string; label: string }>;
-  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
   helper?: string;
   className?: string;
 }) {
@@ -195,12 +213,12 @@ function SelectField({
       <span className="relative block">
         <select
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           className={cn(adminSelectClass, "pr-12")}
         >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
             </option>
           ))}
         </select>
@@ -220,7 +238,7 @@ function SwitchField({
   label: string;
   description: string;
   checked: boolean;
-  onChange: (value: boolean) => void;
+  onChange: (v: boolean) => void;
   className?: string;
 }) {
   return (
@@ -260,125 +278,256 @@ function SwitchField({
   );
 }
 
-export function OutletServicesPanel({
-  services,
-  onChange,
-}: OutletServicesPanelProps) {
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+export function OutletServicesPanel() {
+  const [backendLayanan, setBackendLayanan] = useState<LayananBackend[]>([]);
+  const [meta, setMeta] = useState<Record<string, ServiceMeta>>({});
+  const [loadStatus, setLoadStatus] = useState<"loading" | "error" | "ready">("loading");
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<ServiceDraft>(createDraft());
-  const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ServiceDraft>(emptyDraft());
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const activeCount = useMemo(
-    () => services.filter((service) => service.active).length,
-    [services],
+    () => backendLayanan.filter((s) => s.isActive).length,
+    [backendLayanan],
   );
+
+  const sync = useCallback(
+    (list: LayananBackend[], currentMeta: Record<string, ServiceMeta>) => {
+      syncServicesToLocalStorage(list, currentMeta);
+    },
+    [],
+  );
+
+  const load = useCallback(() => {
+    setLoadStatus("loading");
+    setLoadError(null);
+    fetchPengaturanOutlet()
+      .then((data) => {
+        const loadedMeta = loadServiceMeta();
+        setBackendLayanan(data.layananOutlet);
+        setMeta(loadedMeta);
+        sync(data.layananOutlet, loadedMeta);
+        setLoadStatus("ready");
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 404) {
+          setLoadError("Outlet belum terdaftar di database. Pastikan outlet sudah dibuat terlebih dahulu.");
+        } else {
+          setLoadError(null);
+        }
+        setLoadStatus("error");
+      });
+  }, [sync]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const closeDialog = () => {
     setOpen(false);
     setEditingId(null);
-    setError(null);
+    setFormError(null);
+    setSaving(false);
   };
 
   const startCreate = () => {
+    setDraft(emptyDraft());
     setEditingId(null);
-    setDraft(createDraft());
-    setError(null);
+    setFormError(null);
     setOpen(true);
   };
 
-  const startEdit = (service: OutletService) => {
-    setEditingId(service.id);
-    setDraft(createDraft(service));
-    setError(null);
+  const startEdit = (layanan: LayananBackend) => {
+    setDraft(draftFromBackend(layanan, meta[layanan.id_layanan]));
+    setEditingId(layanan.id_layanan);
+    setFormError(null);
     setOpen(true);
   };
 
-  const updateService = (serviceId: string, updater: (service: OutletService) => OutletService) => {
-    onChange(
-      services.map((service) => (service.id === serviceId ? updater(service) : service)),
+  const handleToggle = async (layanan: LayananBackend) => {
+    const toggled = { ...layanan, isActive: !layanan.isActive };
+    const nextList = backendLayanan.map((s) =>
+      s.id_layanan === layanan.id_layanan ? toggled : s,
     );
+    setBackendLayanan(nextList);
+    sync(nextList, meta);
+
+    try {
+      await updateLayanan(layanan.id_layanan, { is_active: toggled.isActive });
+    } catch {
+      setBackendLayanan(backendLayanan);
+      sync(backendLayanan, meta);
+    }
   };
 
-  const toggleService = (serviceId: string) => {
-    updateService(serviceId, (service) => ({
-      ...service,
-      active: !service.active,
-    }));
+  const handleDelete = async (id: string) => {
+    const nextList = backendLayanan.filter((s) => s.id_layanan !== id);
+    const nextMeta = removeServiceMeta(id);
+    setBackendLayanan(nextList);
+    setMeta(nextMeta);
+    sync(nextList, nextMeta);
+    setConfirmDeleteId(null);
+
+    try {
+      await deleteLayanan(id);
+    } catch {
+      load();
+    }
   };
 
-  const submitDraft = () => {
+  const submitDraft = async () => {
     const name = draft.name.trim();
     const description = draft.description.trim();
-    const eta = draft.eta.trim();
-    const badge = draft.badge.trim() || "Baru";
+    const eta = draft.eta.trim() || "2 hari";
+    const badge = draft.badge.trim() || "KILOAN";
     const price = Number(draft.price);
     const minQuantity = Number(draft.minQuantity);
     const maxQuantity = Number(draft.maxQuantity);
     const step = Number(draft.step);
 
-    if (!name) {
-      setError("Nama layanan harus diisi.");
-      return;
-    }
+    if (!name) { setFormError("Nama layanan harus diisi."); return; }
+    if (!description) { setFormError("Deskripsi harus diisi."); return; }
+    if (!Number.isFinite(price) || price <= 0) { setFormError("Harga harus berupa angka yang valid."); return; }
+    if (!Number.isFinite(minQuantity) || minQuantity <= 0) { setFormError("Minimal jumlah harus lebih dari 0."); return; }
+    if (!Number.isFinite(maxQuantity) || maxQuantity < minQuantity) { setFormError("Maksimal harus ≥ minimal."); return; }
+    if (!Number.isFinite(step) || step <= 0) { setFormError("Step harus lebih dari 0."); return; }
 
-    if (!description) {
-      setError("Deskripsi layanan harus diisi.");
-      return;
-    }
+    setSaving(true);
+    setFormError(null);
 
-    if (!eta) {
-      setError("Estimasi layanan harus diisi.");
-      return;
-    }
-
-    if (!Number.isFinite(price) || price <= 0) {
-      setError("Harga harus berupa angka yang valid.");
-      return;
-    }
-
-    if (!Number.isFinite(minQuantity) || minQuantity <= 0) {
-      setError("Minimal jumlah harus lebih dari 0.");
-      return;
-    }
-
-    if (!Number.isFinite(maxQuantity) || maxQuantity < minQuantity) {
-      setError("Maksimal jumlah harus sama atau lebih besar dari minimal.");
-      return;
-    }
-
-    if (!Number.isFinite(step) || step <= 0) {
-      setError("Step harus lebih dari 0.");
-      return;
-    }
-
-    const nextService: OutletService = {
-      id: editingId ?? createOutletServiceId(name),
-      name,
-      description,
-      price: Math.round(price),
-      unit: draft.unit,
-      eta,
-      badge,
-      minQuantity: Number(minQuantity.toFixed(2)),
-      maxQuantity: Number(maxQuantity.toFixed(2)),
-      step: Number(step.toFixed(2)),
-      iconKey: draft.iconKey,
-      active: draft.active,
+    const coreBody = {
+      nama_layanan: name,
+      harga_satuan: Math.round(price),
+      satuan: draft.unit,
+      tipe: badge,
+      durasi: eta,
     };
 
-    if (editingId) {
-      onChange(
-        services.map((service) => (service.id === editingId ? nextService : service)),
-      );
-    } else {
-      onChange([...services, nextService]);
-    }
+    const newMeta: ServiceMeta = {
+      description: description || "Layanan laundry berkualitas.",
+      iconKey: draft.iconKey,
+      minQuantity: Math.max(minQuantity, 0.5),
+      maxQuantity: Math.max(maxQuantity, 1),
+      step: Math.max(step, 0.5),
+    };
 
-    closeDialog();
+    try {
+      if (editingId) {
+        await updateLayanan(editingId, coreBody);
+        const updatedList = backendLayanan.map((s) =>
+          s.id_layanan === editingId
+            ? { ...s, namaLayanan: name, harga: Math.round(price), satuan: draft.unit, tipe: badge, durasi: eta }
+            : s,
+        );
+        const updatedMeta = upsertServiceMeta(editingId, newMeta);
+        setBackendLayanan(updatedList);
+        setMeta(updatedMeta);
+        sync(updatedList, updatedMeta);
+      } else {
+        const result = await createLayanan(coreBody);
+        const newId = result.data.id_layanan;
+        const newService: LayananBackend = {
+          id_layanan: newId,
+          namaLayanan: name,
+          harga: Math.round(price),
+          satuan: draft.unit,
+          tipe: badge,
+          durasi: eta,
+          isActive: draft.active,
+        };
+        const updatedList = [...backendLayanan, newService];
+        const updatedMeta = upsertServiceMeta(newId, newMeta);
+        setBackendLayanan(updatedList);
+        setMeta(updatedMeta);
+        sync(updatedList, updatedMeta);
+
+        // Set active status if needed (backend default is true)
+        if (!draft.active) {
+          await updateLayanan(newId, { is_active: false }).catch(() => {});
+        }
+      }
+      closeDialog();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Gagal menyimpan layanan.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const dialogTitle = editingId ? `Edit ${draft.name || "layanan"}` : "Tambah layanan";
+  const dialogTitle = editingId
+    ? `Edit ${draft.name || "layanan"}`
+    : "Tambah layanan";
+
+  const serviceToDelete = confirmDeleteId
+    ? backendLayanan.find((s) => s.id_layanan === confirmDeleteId)
+    : null;
+
+  // ── Loading ─────────────────────────────────────────────────────────────────
+
+  if (loadStatus === "loading") {
+    return (
+      <AdminPanel
+        title="Layanan Outlet"
+        description="Memuat data layanan..."
+        icon={Sparkles}
+      >
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-[72px] animate-pulse rounded-[24px] bg-[var(--odong-surface-muted)]"
+            />
+          ))}
+        </div>
+      </AdminPanel>
+    );
+  }
+
+  // ── Error ───────────────────────────────────────────────────────────────────
+
+  if (loadStatus === "error") {
+    return (
+      <AdminPanel
+        title="Layanan Outlet"
+        description="Gagal memuat data layanan."
+        icon={Sparkles}
+      >
+        <div className="rounded-[24px] border border-rose-100 bg-rose-50 p-5 text-center">
+          <AlertCircle className="mx-auto h-8 w-8 text-rose-400" aria-hidden="true" />
+          <p className="mt-3 text-sm font-extrabold text-rose-700">
+            {loadError ? "Outlet tidak ditemukan" : "Tidak bisa terhubung ke server"}
+          </p>
+          <p className="mt-1 text-xs text-rose-500">
+            {loadError ?? "Cek koneksi atau coba muat ulang halaman."}
+          </p>
+          <button
+            type="button"
+            onClick={load}
+            className={cn(adminSecondaryButtonClass, "mx-auto mt-4 inline-flex")}
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            Coba lagi
+          </button>
+        </div>
+      </AdminPanel>
+    );
+  }
+
+  // ── Ready ───────────────────────────────────────────────────────────────────
 
   return (
     <>
@@ -395,29 +544,30 @@ export function OutletServicesPanel({
           />
         }
       >
-        {services.length > 0 ? (
+        {backendLayanan.length > 0 ? (
           <div className="space-y-3">
-            {services.map((service) => {
+            {backendLayanan.map((layanan) => {
+              const service = backendToOutletService(layanan, meta[layanan.id_layanan]);
               const Icon = getOutletServiceIcon(service.iconKey);
-              const serviceActive = service.active;
+              const isActive = layanan.isActive;
 
               return (
                 <div
-                  key={service.id}
+                  key={layanan.id_layanan}
                   className={cn(
                     "flex items-center justify-between gap-4 rounded-[24px] border border-[var(--odong-border)] bg-[var(--odong-surface-muted)] px-4 py-4",
-                    !serviceActive && "opacity-80",
+                    !isActive && "opacity-70",
                   )}
                 >
                   <button
                     type="button"
-                    onClick={() => startEdit(service)}
+                    onClick={() => startEdit(layanan)}
                     className="flex min-w-0 flex-1 items-start gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
                   >
                     <span
                       className={cn(
                         "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl",
-                        serviceActive
+                        isActive
                           ? "bg-primary-50 text-primary-600"
                           : "bg-[var(--odong-surface-soft)] text-[var(--odong-muted)]",
                       )}
@@ -427,22 +577,21 @@ export function OutletServicesPanel({
                     <span className="min-w-0">
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-extrabold text-[var(--odong-text)]">
-                          {service.name}
+                          {layanan.namaLayanan}
                         </span>
                         <span
                           className={cn(
                             "rounded-full px-2.5 py-1 text-[11px] font-bold",
-                            serviceActive
+                            isActive
                               ? "bg-primary-50 text-primary-700"
                               : "bg-[var(--odong-surface-soft)] text-[var(--odong-muted)]",
                           )}
                         >
-                          {serviceActive ? "Aktif" : "Nonaktif"}
+                          {isActive ? "Aktif" : "Nonaktif"}
                         </span>
                       </span>
                       <span className="mt-1 block text-xs font-semibold leading-5 text-[var(--odong-muted)]">
-                        Harga: {formatCurrency(service.price)} • Durasi:{" "}
-                        {service.eta}
+                        {formatCurrency(layanan.harga)} • {layanan.tipe} • {layanan.durasi || "—"}
                       </span>
                     </span>
                   </button>
@@ -450,27 +599,31 @@ export function OutletServicesPanel({
                   <div className="flex items-center gap-2">
                     <AdminIconButton
                       icon={PencilLine}
-                      label={`Edit ${service.name}`}
+                      label={`Edit ${layanan.namaLayanan}`}
                       tone="neutral"
-                      onClick={() => startEdit(service)}
+                      onClick={() => startEdit(layanan)}
+                    />
+                    <AdminIconButton
+                      icon={Trash2}
+                      label={`Hapus ${layanan.namaLayanan}`}
+                      tone="danger"
+                      onClick={() => setConfirmDeleteId(layanan.id_layanan)}
                     />
                     <button
                       type="button"
                       role="switch"
-                      aria-checked={serviceActive}
-                      aria-label={`${serviceActive ? "Nonaktifkan" : "Aktifkan"} ${service.name}`}
-                      onClick={() => toggleService(service.id)}
+                      aria-checked={isActive}
+                      aria-label={`${isActive ? "Nonaktifkan" : "Aktifkan"} ${layanan.namaLayanan}`}
+                      onClick={() => handleToggle(layanan)}
                       className={cn(
                         "flex h-8 w-14 shrink-0 items-center rounded-full p-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300",
-                        serviceActive
-                          ? "bg-primary-600"
-                          : "bg-[var(--odong-surface-soft)]",
+                        isActive ? "bg-primary-600" : "bg-[var(--odong-surface-soft)]",
                       )}
                     >
                       <span
                         className={cn(
                           "h-6 w-6 rounded-full bg-[var(--odong-surface-strong)] shadow-[0_8px_16px_rgba(25,28,29,0.12)] transition",
-                          serviceActive ? "translate-x-6" : "translate-x-0",
+                          isActive ? "translate-x-6" : "translate-x-0",
                         )}
                       />
                     </button>
@@ -490,10 +643,7 @@ export function OutletServicesPanel({
             <button
               type="button"
               onClick={startCreate}
-              className={cn(
-                adminPrimaryButtonClass,
-                "mx-auto mt-5 inline-flex px-5",
-              )}
+              className={cn(adminPrimaryButtonClass, "mx-auto mt-5 inline-flex px-5")}
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               Tambah layanan
@@ -502,6 +652,7 @@ export function OutletServicesPanel({
         )}
       </AdminPanel>
 
+      {/* Add / Edit dialog */}
       <AdminDialog
         open={open}
         title={dialogTitle}
@@ -512,14 +663,14 @@ export function OutletServicesPanel({
       >
         <form
           className="space-y-6"
-          onSubmit={(event) => {
-            event.preventDefault();
+          onSubmit={(e) => {
+            e.preventDefault();
             submitDraft();
           }}
         >
-          {error ? (
+          {formError ? (
             <div className="rounded-[24px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
-              {error}
+              {formError}
             </div>
           ) : null}
 
@@ -527,43 +678,35 @@ export function OutletServicesPanel({
             <TextField
               label="Nama layanan"
               value={draft.name}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, name: value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, name: v }))}
               className="md:col-span-2"
             />
             <TextareaField
               label="Deskripsi"
               value={draft.description}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, description: value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, description: v }))}
               className="md:col-span-2"
             />
             <TextField
-              label="Harga"
+              label="Harga (Rp)"
               value={draft.price}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, price: value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, price: v }))}
               type="number"
               helper="Tulis angka tanpa pemisah ribuan."
             />
             <TextField
               label="Estimasi"
               value={draft.eta}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, eta: value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, eta: v }))}
               helper="Contoh: 2 hari atau 6 jam."
             />
             <SelectField
               label="Unit"
               value={draft.unit}
-              onChange={(value) =>
-                setDraft((current) => ({
-                  ...current,
-                  unit: value === "item" ? "item" : "kg",
+              onChange={(v) =>
+                setDraft((d) => ({
+                  ...d,
+                  unit: v === "item" ? "item" : "kg",
                 }))
               }
               options={[
@@ -572,63 +715,52 @@ export function OutletServicesPanel({
               ]}
             />
             <TextField
-              label="Badge"
+              label="Tipe / Badge"
               value={draft.badge}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, badge: value }))
-              }
-              helper="Contoh: Hemat, Favorit, Baru."
+              onChange={(v) => setDraft((d) => ({ ...d, badge: v }))}
+              helper="Contoh: KILOAN, EXPRESS, SATUAN, atau teks bebas."
             />
             <TextField
               label="Minimal"
               value={draft.minQuantity}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, minQuantity: value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, minQuantity: v }))}
               type="number"
             />
             <TextField
               label="Maksimal"
               value={draft.maxQuantity}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, maxQuantity: value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, maxQuantity: v }))}
               type="number"
             />
             <TextField
               label="Step"
               value={draft.step}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, step: value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, step: v }))}
               type="number"
-              helper="Contoh 0.5 untuk kiloan."
+              helper="Contoh: 0.5 untuk kiloan."
             />
             <SelectField
               label="Ikon"
               value={draft.iconKey}
-              onChange={(value) =>
-                setDraft((current) => ({
-                  ...current,
+              onChange={(v) =>
+                setDraft((d) => ({
+                  ...d,
                   iconKey:
-                    outletServiceIconOptions.find(
-                      (option) => option.key === value,
-                    )?.key ?? "shirt",
+                    outletServiceIconOptions.find((o) => o.key === v)?.key ??
+                    "shirt",
                 }))
               }
-              options={outletServiceIconOptions.map((option) => ({
-                value: option.key,
-                label: option.label,
+              options={outletServiceIconOptions.map((o) => ({
+                value: o.key,
+                label: o.label,
               }))}
-              helper="Ikon ini dipakai di kartu layanan pada halaman user."
+              helper="Ikon ini dipakai di kartu layanan halaman user."
             />
             <SwitchField
               label="Aktifkan layanan"
               description="Layanan aktif akan tampil di halaman user."
               checked={draft.active}
-              onChange={(value) =>
-                setDraft((current) => ({ ...current, active: value }))
-              }
+              onChange={(v) => setDraft((d) => ({ ...d, active: v }))}
               className="md:col-span-2"
             />
           </div>
@@ -637,16 +769,52 @@ export function OutletServicesPanel({
             <button
               type="button"
               onClick={closeDialog}
+              disabled={saving}
               className={adminSecondaryButtonClass}
             >
               Batal
             </button>
-            <button type="submit" className={adminPrimaryButtonClass}>
-              <Save className="h-4 w-4" aria-hidden="true" />
-              Simpan layanan
+            <button
+              type="submit"
+              disabled={saving}
+              className={adminPrimaryButtonClass}
+            >
+              {saving ? (
+                <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Save className="h-4 w-4" aria-hidden="true" />
+              )}
+              {saving ? "Menyimpan..." : "Simpan layanan"}
             </button>
           </div>
         </form>
+      </AdminDialog>
+
+      {/* Confirm delete dialog */}
+      <AdminDialog
+        open={Boolean(confirmDeleteId)}
+        title="Hapus layanan?"
+        description={`"${serviceToDelete?.namaLayanan ?? ""}" akan dihapus permanen dari outlet.`}
+        onClose={() => setConfirmDeleteId(null)}
+        size="sm"
+      >
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setConfirmDeleteId(null)}
+            className={adminSecondaryButtonClass}
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-[20px] bg-rose-600 px-5 text-sm font-bold text-white transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 active:scale-[0.98]"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            Hapus
+          </button>
+        </div>
       </AdminDialog>
     </>
   );

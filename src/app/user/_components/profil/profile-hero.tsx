@@ -21,10 +21,10 @@ type ProfileHeroProps = {
 export function ProfileHero({ profile, metrics }: ProfileHeroProps) {
   return (
     <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-stretch 2xl:grid-cols-[minmax(0,1fr)_420px]">
-      <div className="overflow-hidden rounded-[32px] border border-primary-100 bg-primary-50/80 p-6 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-8">
+      <div className="overflow-hidden rounded-[32px] border border-primary-100 dark:border-[var(--odong-border)] bg-primary-50/80 dark:bg-[var(--odong-surface-soft)] p-6 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white/80 px-3 py-1.5 text-xs font-bold text-primary-700">
+            <p className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white/80 dark:bg-[var(--odong-surface-strong)] px-3 py-1.5 text-xs font-bold text-primary-700">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               Profil pelanggan
             </p>
@@ -46,7 +46,7 @@ export function ProfileHero({ profile, metrics }: ProfileHeroProps) {
               </Link>
               <Link
                 href="/user/riwayat"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-primary-100 bg-white/75 px-5 text-sm font-bold text-primary-700 transition hover:-translate-y-0.5 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-primary-100 bg-white/75 dark:bg-[var(--odong-surface-strong)] px-5 text-sm font-bold text-primary-700 transition hover:-translate-y-0.5 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
               >
                 Lihat riwayat
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -73,7 +73,7 @@ export function ProfileHero({ profile, metrics }: ProfileHeroProps) {
                 return (
                   <div
                     key={item.label}
-                    className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white/80 px-4 py-2 text-xs font-bold text-[var(--odong-text)] shadow-[0_8px_18px_rgba(0,88,202,0.05)]"
+                    className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white/80 dark:bg-[var(--odong-surface-strong)] px-4 py-2 text-xs font-bold text-[var(--odong-text)] shadow-[0_8px_18px_rgba(0,88,202,0.05)]"
                   >
                     <Icon className="h-3.5 w-3.5 text-primary-600" aria-hidden="true" />
                     <span className="truncate">{item.label}</span>
@@ -83,7 +83,7 @@ export function ProfileHero({ profile, metrics }: ProfileHeroProps) {
             </div>
           </div>
 
-          <aside className="w-full rounded-3xl border border-primary-100 bg-white/80 p-4 shadow-[0_12px_26px_rgba(0,88,202,0.07)] lg:max-w-[320px]">
+          <aside className="w-full rounded-3xl border border-primary-100 bg-white/80 dark:bg-[var(--odong-surface-strong)] p-4 shadow-[0_12px_26px_rgba(0,88,202,0.07)] lg:max-w-[320px]">
             <div className="flex items-center gap-3">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-neutral-900 text-lg font-extrabold text-white">
                 {profile.initials}
@@ -116,7 +116,7 @@ export function ProfileHero({ profile, metrics }: ProfileHeroProps) {
                 </span>
               </div>
 
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/75">
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/75 dark:bg-[var(--odong-surface-strong)]">
                 <div
                   className="h-full rounded-full bg-primary-600"
                   style={{ width: `${profile.profileCompletion}%` }}
@@ -204,7 +204,7 @@ export function ProfileHero({ profile, metrics }: ProfileHeroProps) {
               <article
                 key={metric.label}
                 className={cn(
-                  "rounded-2xl border border-primary-100 bg-white/75 px-4 py-3",
+                  "rounded-2xl border border-primary-100 bg-white/75 dark:bg-[var(--odong-surface-strong)] px-4 py-3",
                 )}
               >
                 <div className="flex items-center gap-2">

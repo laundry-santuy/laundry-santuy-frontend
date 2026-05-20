@@ -68,10 +68,10 @@ export function TrackingTimeline({ steps }: TrackingTimelineProps) {
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
-                    <span className="rounded-full bg-white/75 px-3 py-1 text-xs font-bold text-primary-700">
+                    <span className="rounded-full bg-[var(--odong-surface-strong)] px-3 py-1 text-xs font-bold text-primary-700">
                       {stepCopy[step.status]}
                     </span>
-                    <span className="rounded-full bg-white/75 px-3 py-1 text-xs font-semibold text-[var(--odong-muted)]">
+                    <span className="rounded-full bg-[var(--odong-surface-strong)] px-3 py-1 text-xs font-semibold text-[var(--odong-muted)]">
                       {step.time}
                     </span>
                   </div>

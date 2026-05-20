@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { defaultOutletServices } from "@/lib/outlet-services";
 import {
   createPromoCampaignFromDraft,
   defaultPromoCampaigns,
@@ -25,7 +24,6 @@ import {
   type PromoCampaign,
   type PromoDraft,
 } from "@/lib/promo-campaigns";
-import { useOutletServices } from "@/hooks/use-outlet-services";
 import { usePromoCampaigns } from "@/hooks/use-promo-campaigns";
 import { defaultAdminSettings } from "../data";
 import type { AdminSettingValues } from "../types";
@@ -391,17 +389,13 @@ export function AdminSettingsPage() {
     useState<AdminSettingValues>(defaultAdminSettings);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<SettingSectionId>("umum");
+  const [outletPanelKey, setOutletPanelKey] = useState(0);
   const [promoDraft, setPromoDraft] =
     useState<PromoDraft>(defaultPromoDraft);
   const [promoFeedback, setPromoFeedback] = useState<{
     tone: "success" | "error";
     message: string;
   } | null>(null);
-  const {
-    services: outletServices,
-    setServices: setOutletServices,
-    persist: persistOutletServices,
-  } = useOutletServices();
   const {
     campaigns: promoCampaigns,
     setCampaigns: setPromoCampaigns,
@@ -499,7 +493,6 @@ export function AdminSettingsPage() {
   };
 
   const saveSettings = () => {
-    persistOutletServices();
     persistPromoCampaigns();
     setSavedAt(
       new Date().toLocaleTimeString("id-ID", {
@@ -511,7 +504,7 @@ export function AdminSettingsPage() {
 
   const resetSettings = () => {
     setSettings(defaultAdminSettings);
-    setOutletServices(defaultOutletServices);
+    setOutletPanelKey((k) => k + 1);
     setPromoCampaigns(defaultPromoCampaigns);
     persistPromoCampaigns(defaultPromoCampaigns);
     setPromoDraft(defaultPromoDraft);
@@ -925,11 +918,11 @@ export function AdminSettingsPage() {
         <aside className="space-y-5">
           {isOutletSection ? (
             <>
-              <OutletServicesPanel
-                services={outletServices}
-                onChange={setOutletServices}
+              <OutletServicesPanel key={outletPanelKey} />
+              <SaveStatusCard
+                savedAt={savedAt}
+                idleMessage="Perubahan layanan langsung tersimpan ke database."
               />
-              <SaveStatusCard savedAt={savedAt} />
             </>
           ) : null}
 

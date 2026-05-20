@@ -10,10 +10,10 @@ type HistoryHeroProps = {
 export function HistoryHero({ metrics, totalOrders }: HistoryHeroProps) {
   return (
     <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-stretch 2xl:grid-cols-[minmax(0,1fr)_420px]">
-      <div className="overflow-hidden rounded-[32px] border border-primary-100 bg-primary-50/80 p-6 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-8">
+      <div className="overflow-hidden rounded-[32px] border border-primary-100 dark:border-[var(--odong-border)] bg-primary-50/80 dark:bg-[var(--odong-surface-soft)] p-6 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white/80 px-3 py-1.5 text-xs font-bold text-primary-700">
+            <p className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white/80 dark:bg-[var(--odong-surface-strong)] px-3 py-1.5 text-xs font-bold text-primary-700">
               <ReceiptText className="h-3.5 w-3.5" aria-hidden="true" />
               Riwayat order
             </p>
@@ -26,7 +26,7 @@ export function HistoryHero({ metrics, totalOrders }: HistoryHeroProps) {
             </p>
           </div>
 
-          <div className="w-full rounded-3xl border border-primary-100 bg-white/80 p-4 shadow-[0_12px_26px_rgba(0,88,202,0.07)] lg:max-w-[320px]">
+          <div className="w-full rounded-3xl border border-primary-100 bg-white/80 dark:bg-[var(--odong-surface-strong)] p-4 shadow-[0_12px_26px_rgba(0,88,202,0.07)] lg:max-w-[320px]">
             <p className="text-xs font-semibold text-[var(--odong-muted)]">
               Total tersimpan
             </p>
@@ -46,7 +46,7 @@ export function HistoryHero({ metrics, totalOrders }: HistoryHeroProps) {
             return (
               <article
                 key={metric.label}
-                className="rounded-2xl border border-primary-100 bg-white/75 px-4 py-3"
+                className="rounded-2xl border border-primary-100 bg-white/75 dark:bg-[var(--odong-surface-strong)] px-4 py-3"
               >
                 <div className="flex items-center gap-2">
                   <Icon

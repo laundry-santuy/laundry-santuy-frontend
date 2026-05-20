@@ -125,7 +125,7 @@ export function HistoryDetailPanel({ order }: HistoryDetailPanelProps) {
             </p>
           </div>
           {order.rating ? (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/75 px-3 py-1.5 text-xs font-extrabold text-[var(--odong-text)]">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/75 dark:bg-[var(--odong-surface-strong)] px-3 py-1.5 text-xs font-extrabold text-[var(--odong-text)]">
               <Star
                 className="h-3.5 w-3.5 fill-[#ffc107] text-[#ffc107]"
                 aria-hidden="true"

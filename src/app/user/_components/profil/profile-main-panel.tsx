@@ -115,7 +115,7 @@ export function ProfileMainPanel({
         />
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <div className="rounded-[28px] border border-primary-100 bg-primary-50/75 p-5">
+          <div className="rounded-[28px] border border-primary-100 dark:border-[var(--odong-border)] bg-primary-50/75 dark:bg-[var(--odong-surface-strong)] p-5">
             <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-neutral-900 text-2xl font-extrabold text-white shadow-[0_16px_34px_rgba(25,28,29,0.12)]">
               {profile.initials}
             </div>
@@ -200,7 +200,7 @@ export function ProfileMainPanel({
                     <Icon className="h-5 w-5" aria-hidden="true" />
                   </span>
                   {address.isPrimary ? (
-                    <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-primary-700">
+                    <span className="rounded-full bg-white/80 dark:bg-[var(--odong-surface-strong)] px-3 py-1 text-xs font-bold text-primary-700">
                       Utama
                     </span>
                   ) : null}
@@ -211,7 +211,7 @@ export function ProfileMainPanel({
                 <p className="mt-2 text-sm leading-6 text-[var(--odong-muted)]">
                   {address.address}
                 </p>
-                <p className="mt-3 rounded-2xl bg-white/70 px-4 py-3 text-xs font-medium leading-5 text-[var(--odong-muted)]">
+                <p className="mt-3 rounded-2xl bg-[var(--odong-surface-strong)] px-4 py-3 text-xs font-medium leading-5 text-[var(--odong-muted)]">
                   {address.note}
                 </p>
               </article>

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -18,6 +18,7 @@ import {
   paymentOptions,
   pickupSlots,
 } from "./data";
+import { createPesanan, fetchPesan, type PesanResponse } from "@/lib/user-api";
 import { OrderDetailsPanel } from "./order-details-panel";
 import { OrderServiceGrid } from "./order-service-grid";
 import { OrderSummary } from "./order-summary";
@@ -93,6 +94,16 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
   );
   const [note, setNote] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [successOrder, setSuccessOrder] = useState<{ kodePesanan: string | null; total: number } | null>(null);
+  const [beServices, setBeServices] = useState<PesanResponse["pilihLayanan"]["items"]>([]);
+
+  useEffect(() => {
+    fetchPesan()
+      .then((data) => setBeServices(data.pilihLayanan.items))
+      .catch(() => {});
+  }, []);
 
   const selectedSlot = pickupSlots.find((slot) => slot.id === selectedSlotId);
   const selectedAddress = addressOptions.find(
@@ -123,6 +134,43 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
     return { subtotal, pickupFee, discount, total };
   }, [effectiveQuantity, selectedAddOns, selectedService]);
 
+  if (successOrder) {
+    return (
+      <div className="relative mx-auto flex min-h-[60vh] w-full max-w-lg flex-col items-center justify-center gap-6 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-50">
+          <CheckCircle2 className="h-10 w-10 text-primary-600" aria-hidden="true" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-extrabold text-[var(--odong-text)]">Pesanan berhasil dibuat!</h2>
+          {successOrder.kodePesanan && (
+            <p className="mt-2 text-sm font-semibold text-primary-700">
+              Kode: {successOrder.kodePesanan}
+            </p>
+          )}
+          <p className="mt-2 text-sm text-[var(--odong-muted)]">
+            Estimasi total: Rp {successOrder.total.toLocaleString("id-ID")}
+          </p>
+          <p className="mt-1 text-sm text-[var(--odong-muted)]">Kurir akan segera menjemput cucianmu.</p>
+        </div>
+        <div className="flex gap-3">
+          <Link
+            href="/user/lacak"
+            className="inline-flex h-11 items-center gap-2 rounded-2xl bg-primary-600 px-6 text-sm font-bold text-white transition hover:bg-primary-700"
+          >
+            Lacak Pesanan
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href="/user/beranda"
+            className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface)] px-6 text-sm font-bold text-[var(--odong-text)] transition hover:bg-[var(--odong-surface-strong)]"
+          >
+            Beranda
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (status === "loading") {
     return <OrderLoadingState />;
   }
@@ -134,8 +182,8 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
   if (serviceOptions.length === 0) {
     return (
       <OrderEmptyState
-        title="Layanan outlet belum aktif"
-        description="Admin outlet belum menyalakan layanan yang bisa dipesan. Coba lagi setelah layanan diaktifkan."
+        title="Layanan tidak tersedia"
+        description="Pastikan admin telah menambahkan layanan ke outlet."
       />
     );
   }
@@ -169,9 +217,56 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
     setSubmitted(false);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitted(true);
+    setSubmitError(null);
+
+    if (!selectedService) return;
+
+    const nameToMatch = selectedService.name.trim().toLowerCase();
+    const beService =
+      beServices.find((s) => s.nama.trim().toLowerCase() === nameToMatch) ??
+      beServices[0];
+
+    if (!beService) {
+      setSubmitError("Layanan tidak tersedia. Pastikan admin telah menambahkan layanan ke outlet.");
+      return;
+    }
+
+    const today    = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const isToday = selectedSlot?.day === "Hari ini";
+    const pickupDate = (isToday ? today : tomorrow)
+      .toISOString()
+      .slice(0, 10);
+    const pickupTime = selectedSlot?.window
+      ? selectedSlot.window.split(" - ")[0].replace(".", ":") + ":00"
+      : undefined;
+
+    setIsSubmitting(true);
+    try {
+      const result = await createPesanan({
+        id_layanan: beService.id_layanan,
+        id_laundry: beService.id_laundry,
+        berat: effectiveQuantity,
+        tanggal_penjemputan: pickupDate,
+        waktu_penjemputan: pickupTime,
+        catatan: note.trim() || undefined,
+        alamat_penjemputan: selectedAddress?.address,
+      });
+      setSuccessOrder({
+        kodePesanan: result.pesanan.kodePesanan,
+        total: result.pesanan.totalEstimasi,
+      });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Gagal membuat pesanan.");
+      setSubmitted(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDecreaseQuantity = () => {
@@ -210,10 +305,10 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
 
       <div className="relative z-10 space-y-5">
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px] 2xl:grid-cols-[minmax(0,1fr)_420px] xl:items-stretch">
-          <section className="overflow-hidden rounded-[32px] border border-primary-100 bg-primary-50/80 p-6 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-8">
+          <section className="overflow-hidden rounded-[32px] border border-primary-100 bg-primary-50/80 dark:border-[var(--odong-border)] dark:bg-[var(--odong-surface-soft)] p-6 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-8">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white/80 px-3 py-1.5 text-xs font-bold text-primary-700">
+                <p className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white/80 dark:bg-[var(--odong-surface-strong)] px-3 py-1.5 text-xs font-bold text-primary-700">
                   <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                   Workspace order
                 </p>
@@ -226,7 +321,7 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
                 </p>
               </div>
 
-              <div className="rounded-3xl border border-primary-100 bg-white/80 p-4 shadow-[0_12px_26px_rgba(0,88,202,0.07)] lg:min-w-[230px]">
+              <div className="rounded-3xl border border-primary-100 bg-white/80 dark:bg-[var(--odong-surface-strong)] p-4 shadow-[0_12px_26px_rgba(0,88,202,0.07)] lg:min-w-[230px]">
                 <p className="text-xs font-semibold text-[var(--odong-muted)]">
                   Pilihan aktif
                 </p>
@@ -248,7 +343,7 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
                 return (
                   <div
                     key={item.label}
-                    className="rounded-2xl border border-primary-100 bg-white/75 px-4 py-3"
+                    className="rounded-2xl border border-primary-100 bg-white/75 dark:bg-[var(--odong-surface-strong)] px-4 py-3"
                   >
                     <div className="flex items-center gap-2">
                       <Icon
@@ -422,6 +517,11 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
           </section>
           </div>
 
+          {submitError && (
+            <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              {submitError}
+            </p>
+          )}
           <OrderSummary
             service={selectedService}
             quantity={effectiveQuantity}
@@ -437,7 +537,7 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
             discount={pricing.discount}
             total={pricing.total}
             submitted={submitted}
-            canSubmit={canSubmit}
+            canSubmit={canSubmit && !isSubmitting}
             onSelectPayment={(paymentId) => {
               setSelectedPaymentId(paymentId);
               setSubmitted(false);

@@ -91,7 +91,7 @@ export function OrderDetailsPanel({
               aria-label="Kurangi jumlah"
               disabled={minReached}
               onClick={onDecreaseQuantity}
-              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-900 text-white shadow-[0_12px_22px_rgba(25,28,29,0.18)] transition hover:-translate-y-0.5 hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.96] disabled:cursor-not-allowed disabled:bg-white/80 disabled:text-[var(--odong-muted-soft)] disabled:shadow-none disabled:hover:translate-y-0"
+              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-900 text-white shadow-[0_12px_22px_rgba(25,28,29,0.18)] transition hover:-translate-y-0.5 hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.96] disabled:cursor-not-allowed disabled:bg-[var(--odong-surface-strong)] disabled:text-[var(--odong-muted-soft)] disabled:shadow-none disabled:hover:translate-y-0"
             >
               <Minus className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -106,7 +106,7 @@ export function OrderDetailsPanel({
               aria-label="Tambah jumlah"
               disabled={maxReached}
               onClick={onIncreaseQuantity}
-              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-[0_12px_24px_rgba(0,88,202,0.28)] transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.96] disabled:cursor-not-allowed disabled:bg-white/80 disabled:text-[var(--odong-muted-soft)] disabled:shadow-none disabled:hover:translate-y-0"
+              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-[0_12px_24px_rgba(0,88,202,0.28)] transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.96] disabled:cursor-not-allowed disabled:bg-[var(--odong-surface-strong)] disabled:text-[var(--odong-muted-soft)] disabled:shadow-none disabled:hover:translate-y-0"
             >
               <Plus className="h-5 w-5" aria-hidden="true" />
             </button>

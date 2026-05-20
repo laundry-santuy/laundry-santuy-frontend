@@ -19,7 +19,7 @@ import { type FormEvent, useState } from "react";
 
 const roleRedirect: Record<string, string> = {
   KURIR:    "/driver/pesanan/masuk",
-  PENGGUNA: "/",
+  PENGGUNA: "/user/beranda",
   ADMIN:    "/admin",
 };
 

@@ -22,7 +22,7 @@ export function RecentOrders({ orders }: RecentOrdersProps) {
               key={order.id}
               className="odong-surface-soft grid min-h-[92px] gap-3 rounded-3xl border border-white/80 bg-primary-50/65 px-5 shadow-[0_18px_40px_rgba(25,28,29,0.04)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:bg-[var(--odong-surface-strong)] hover:shadow-[0_22px_48px_rgba(25,28,29,0.07)] sm:grid-cols-[auto_minmax(0,1fr)_120px_110px_auto] sm:items-center"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-primary-600 shadow-[inset_0_0_0_1px_rgba(0,88,202,0.08)]">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--odong-surface-strong)] text-primary-600 shadow-[inset_0_0_0_1px_rgba(0,88,202,0.08)]">
                 <Package className="h-6 w-6" aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">

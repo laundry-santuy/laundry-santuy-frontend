@@ -16,10 +16,10 @@ type TrackingHeroProps = {
 export function TrackingHero({ order, insights }: TrackingHeroProps) {
   return (
     <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-stretch">
-      <div className="overflow-hidden rounded-[32px] border border-primary-100 bg-primary-50/80 p-6 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-8">
+      <div className="overflow-hidden rounded-[32px] border border-primary-100 dark:border-[var(--odong-border)] bg-primary-50/80 dark:bg-[var(--odong-surface-soft)] p-6 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white/80 px-3 py-1.5 text-xs font-bold text-primary-700">
+            <p className="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-white/80 dark:bg-[var(--odong-surface-strong)] px-3 py-1.5 text-xs font-bold text-primary-700">
               <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
               Live tracking
             </p>
@@ -32,7 +32,7 @@ export function TrackingHero({ order, insights }: TrackingHeroProps) {
             </p>
           </div>
 
-          <div className="rounded-3xl border border-primary-100 bg-white/80 p-4 shadow-[0_12px_26px_rgba(0,88,202,0.07)] lg:min-w-[230px]">
+          <div className="rounded-3xl border border-primary-100 bg-white/80 dark:bg-[var(--odong-surface-strong)] p-4 shadow-[0_12px_26px_rgba(0,88,202,0.07)] lg:min-w-[230px]">
             <p className="text-xs font-semibold text-[var(--odong-muted)]">
               Order aktif
             </p>
@@ -52,7 +52,7 @@ export function TrackingHero({ order, insights }: TrackingHeroProps) {
             return (
               <article
                 key={item.label}
-                className="rounded-2xl border border-primary-100 bg-white/75 px-4 py-3"
+                className="rounded-2xl border border-primary-100 bg-white/75 dark:bg-[var(--odong-surface-strong)] px-4 py-3"
               >
                 <div className="flex items-center gap-2">
                   <Icon

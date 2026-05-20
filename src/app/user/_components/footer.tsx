@@ -45,7 +45,7 @@ const contactItems = [
     icon: Mail,
   },
   {
-    label: "Setiap hari, 08.00 - 21.00",
+    label: "Setiap hari, 08.00-21.00 WIB",
     icon: Clock,
   },
 ];

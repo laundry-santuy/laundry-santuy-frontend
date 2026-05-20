@@ -124,7 +124,7 @@ export function OrderServiceGrid({
                     "flex h-6 w-6 items-center justify-center rounded-full border transition",
                     selected
                       ? "border-white bg-white text-primary-700"
-                      : "border-primary-200 bg-white text-transparent group-hover:text-primary-600",
+                      : "border-primary-200 bg-[var(--odong-surface-strong)] text-transparent group-hover:text-primary-600",
                   )}
                 >
                   <CheckCircle2 className="h-4 w-4" aria-hidden="true" />

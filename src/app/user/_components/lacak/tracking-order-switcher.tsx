@@ -86,10 +86,10 @@ export function TrackingOrderSwitcher({
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white/75 px-3 py-1 text-xs font-bold text-primary-700">
+                <span className="rounded-full bg-white/75 dark:bg-[var(--odong-surface-strong)] px-3 py-1 text-xs font-bold text-primary-700">
                   {order.eta}
                 </span>
-                <span className="rounded-full bg-white/75 px-3 py-1 text-xs font-semibold text-[var(--odong-muted)]">
+                <span className="rounded-full bg-white/75 dark:bg-[var(--odong-surface-strong)] px-3 py-1 text-xs font-semibold text-[var(--odong-muted)]">
                   {order.pickupWindow}
                 </span>
               </div>

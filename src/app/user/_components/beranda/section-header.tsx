@@ -28,7 +28,7 @@ export function SectionHeader({
       {actionLabel ? (
         <Link
           href={href}
-          className="inline-flex items-center gap-1 text-sm font-medium text-[#3d81ff] underline-offset-4 transition hover:text-primary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+          className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 underline-offset-4 transition hover:text-primary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 dark:text-primary-400 dark:hover:text-primary-300"
         >
           {actionLabel}
           <ChevronRight className="h-4 w-4" aria-hidden="true" />

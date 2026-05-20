@@ -21,7 +21,7 @@ function StepIndicator({
 
   return (
     <li className="relative flex min-w-0 flex-col items-center text-center">
-      <div className="odong-surface-muted min-h-[48px] w-full rounded-2xl bg-neutral-50 px-2 py-2">
+      <div className="odong-surface-muted min-h-[48px] w-full rounded-2xl px-2 py-2">
         <p className="odong-muted-soft text-[10px] font-semibold uppercase leading-3 tracking-wide text-neutral-400">
           {meta.label}
         </p>
@@ -43,7 +43,7 @@ function StepIndicator({
               "border-primary-500 bg-primary-500 text-white shadow-[0_8px_16px_rgba(38,113,238,0.22)]",
             isCurrent &&
               "border-primary-500 bg-primary-50 text-primary-600 shadow-[0_0_0_4px_rgba(38,113,238,0.08)]",
-            !isDone && !isCurrent && "border-neutral-200 bg-white text-neutral-400",
+            !isDone && !isCurrent && "border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-muted-soft)]",
           )}
         >
           <Icon className="h-5 w-5" aria-hidden="true" />
@@ -72,7 +72,7 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
   ];
 
   return (
-    <article className="odong-surface-strong rounded-[24px] bg-white p-4 shadow-[0_18px_40px_rgba(25,28,29,0.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_48px_rgba(25,28,29,0.07)] sm:p-5">
+    <article className="odong-surface-strong rounded-[24px] p-4 shadow-[0_18px_40px_rgba(25,28,29,0.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_48px_rgba(25,28,29,0.07)] sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-primary-600">
@@ -93,7 +93,7 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
       </div>
 
       <ol className="relative mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-[86px] hidden h-0.5 bg-neutral-200 sm:block" />
+        <div className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-[86px] hidden h-0.5 bg-[var(--odong-border)] sm:block" />
         <div className="pointer-events-none absolute left-[12.5%] right-[37.5%] top-[86px] hidden h-0.5 bg-primary-500 sm:block" />
         {order.steps.map((step, index) => (
           <StepIndicator
@@ -105,7 +105,7 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
         ))}
       </ol>
 
-      <div className="odong-surface-muted mt-5 grid gap-3 rounded-2xl bg-neutral-50 p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+      <div className="odong-surface-muted mt-5 grid gap-3 rounded-2xl p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white">
           AH
