@@ -24,13 +24,8 @@ import {
   createLayanan,
   deleteLayanan,
   fetchPengaturanOutlet,
-  loadServiceMeta,
-  removeServiceMeta,
-  syncServicesToLocalStorage,
   updateLayanan,
-  upsertServiceMeta,
   type LayananBackend,
-  type ServiceMeta,
 } from "@/lib/admin-api";
 import { AdminDialog } from "../admin-dialog";
 import { AdminIconButton } from "../admin-table-tools";
@@ -74,21 +69,18 @@ function emptyDraft(): ServiceDraft {
   };
 }
 
-function draftFromBackend(
-  layanan: LayananBackend,
-  meta?: ServiceMeta,
-): ServiceDraft {
+function draftFromBackend(layanan: LayananBackend): ServiceDraft {
   return {
     name: layanan.namaLayanan,
-    description: meta?.description ?? "Layanan laundry berkualitas.",
+    description: layanan.deskripsi ?? "Layanan laundry berkualitas.",
     price: String(layanan.harga),
     unit: layanan.satuan,
     eta: layanan.durasi || "2 hari",
     badge: layanan.tipe,
-    minQuantity: String(meta?.minQuantity ?? 1),
-    maxQuantity: String(meta?.maxQuantity ?? 12),
-    step: String(meta?.step ?? 0.5),
-    iconKey: meta?.iconKey ?? suggestOutletServiceIconKey(layanan.namaLayanan),
+    minQuantity: String(layanan.minQuantity ?? 1),
+    maxQuantity: String(layanan.maxQuantity ?? 12),
+    step: String(layanan.stepQuantity ?? 0.5),
+    iconKey: layanan.iconKey ?? suggestOutletServiceIconKey(layanan.namaLayanan),
     active: layanan.isActive,
   };
 }
@@ -290,7 +282,6 @@ function formatCurrency(value: number) {
 
 export function OutletServicesPanel() {
   const [backendLayanan, setBackendLayanan] = useState<LayananBackend[]>([]);
-  const [meta, setMeta] = useState<Record<string, ServiceMeta>>({});
   const [loadStatus, setLoadStatus] = useState<"loading" | "error" | "ready">("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -305,22 +296,12 @@ export function OutletServicesPanel() {
     [backendLayanan],
   );
 
-  const sync = useCallback(
-    (list: LayananBackend[], currentMeta: Record<string, ServiceMeta>) => {
-      syncServicesToLocalStorage(list, currentMeta);
-    },
-    [],
-  );
-
   const load = useCallback(() => {
     setLoadStatus("loading");
     setLoadError(null);
     fetchPengaturanOutlet()
       .then((data) => {
-        const loadedMeta = loadServiceMeta();
         setBackendLayanan(data.layananOutlet);
-        setMeta(loadedMeta);
-        sync(data.layananOutlet, loadedMeta);
         setLoadStatus("ready");
       })
       .catch((err) => {
@@ -331,7 +312,7 @@ export function OutletServicesPanel() {
         }
         setLoadStatus("error");
       });
-  }, [sync]);
+  }, []);
 
   useEffect(() => {
     load();
@@ -352,7 +333,7 @@ export function OutletServicesPanel() {
   };
 
   const startEdit = (layanan: LayananBackend) => {
-    setDraft(draftFromBackend(layanan, meta[layanan.id_layanan]));
+    setDraft(draftFromBackend(layanan));
     setEditingId(layanan.id_layanan);
     setFormError(null);
     setOpen(true);
@@ -364,22 +345,17 @@ export function OutletServicesPanel() {
       s.id_layanan === layanan.id_layanan ? toggled : s,
     );
     setBackendLayanan(nextList);
-    sync(nextList, meta);
 
     try {
       await updateLayanan(layanan.id_layanan, { is_active: toggled.isActive });
     } catch {
       setBackendLayanan(backendLayanan);
-      sync(backendLayanan, meta);
     }
   };
 
   const handleDelete = async (id: string) => {
     const nextList = backendLayanan.filter((s) => s.id_layanan !== id);
-    const nextMeta = removeServiceMeta(id);
     setBackendLayanan(nextList);
-    setMeta(nextMeta);
-    sync(nextList, nextMeta);
     setConfirmDeleteId(null);
 
     try {
@@ -409,36 +385,43 @@ export function OutletServicesPanel() {
     setSaving(true);
     setFormError(null);
 
-    const coreBody = {
+    const body = {
       nama_layanan: name,
       harga_satuan: Math.round(price),
       satuan: draft.unit,
       tipe: badge,
       durasi: eta,
-    };
-
-    const newMeta: ServiceMeta = {
-      description: description || "Layanan laundry berkualitas.",
-      iconKey: draft.iconKey,
-      minQuantity: Math.max(minQuantity, 0.5),
-      maxQuantity: Math.max(maxQuantity, 1),
-      step: Math.max(step, 0.5),
+      deskripsi: description,
+      icon_key: draft.iconKey,
+      min_quantity: Math.max(minQuantity, 0.5),
+      max_quantity: Math.max(maxQuantity, 1),
+      step_quantity: Math.max(step, 0.5),
     };
 
     try {
       if (editingId) {
-        await updateLayanan(editingId, coreBody);
-        const updatedList = backendLayanan.map((s) =>
-          s.id_layanan === editingId
-            ? { ...s, namaLayanan: name, harga: Math.round(price), satuan: draft.unit, tipe: badge, durasi: eta }
-            : s,
+        await updateLayanan(editingId, body);
+        setBackendLayanan((prev) =>
+          prev.map((s) =>
+            s.id_layanan === editingId
+              ? {
+                  ...s,
+                  namaLayanan: name,
+                  harga: Math.round(price),
+                  satuan: draft.unit,
+                  tipe: badge,
+                  durasi: eta,
+                  deskripsi: description,
+                  iconKey: draft.iconKey,
+                  minQuantity: Math.max(minQuantity, 0.5),
+                  maxQuantity: Math.max(maxQuantity, 1),
+                  stepQuantity: Math.max(step, 0.5),
+                }
+              : s,
+          ),
         );
-        const updatedMeta = upsertServiceMeta(editingId, newMeta);
-        setBackendLayanan(updatedList);
-        setMeta(updatedMeta);
-        sync(updatedList, updatedMeta);
       } else {
-        const result = await createLayanan(coreBody);
+        const result = await createLayanan(body);
         const newId = result.data.id_layanan;
         const newService: LayananBackend = {
           id_layanan: newId,
@@ -448,14 +431,14 @@ export function OutletServicesPanel() {
           tipe: badge,
           durasi: eta,
           isActive: draft.active,
+          deskripsi: description,
+          iconKey: draft.iconKey,
+          minQuantity: Math.max(minQuantity, 0.5),
+          maxQuantity: Math.max(maxQuantity, 1),
+          stepQuantity: Math.max(step, 0.5),
         };
-        const updatedList = [...backendLayanan, newService];
-        const updatedMeta = upsertServiceMeta(newId, newMeta);
-        setBackendLayanan(updatedList);
-        setMeta(updatedMeta);
-        sync(updatedList, updatedMeta);
+        setBackendLayanan((prev) => [...prev, newService]);
 
-        // Set active status if needed (backend default is true)
         if (!draft.active) {
           await updateLayanan(newId, { is_active: false }).catch(() => {});
         }
@@ -547,7 +530,7 @@ export function OutletServicesPanel() {
         {backendLayanan.length > 0 ? (
           <div className="space-y-3">
             {backendLayanan.map((layanan) => {
-              const service = backendToOutletService(layanan, meta[layanan.id_layanan]);
+              const service = backendToOutletService(layanan);
               const Icon = getOutletServiceIcon(service.iconKey);
               const isActive = layanan.isActive;
 
@@ -597,12 +580,6 @@ export function OutletServicesPanel() {
                   </button>
 
                   <div className="flex items-center gap-2">
-                    <AdminIconButton
-                      icon={PencilLine}
-                      label={`Edit ${layanan.namaLayanan}`}
-                      tone="neutral"
-                      onClick={() => startEdit(layanan)}
-                    />
                     <AdminIconButton
                       icon={Trash2}
                       label={`Hapus ${layanan.namaLayanan}`}

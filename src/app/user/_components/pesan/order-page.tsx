@@ -18,7 +18,7 @@ import {
   paymentOptions,
   pickupSlots,
 } from "./data";
-import { createPesanan, fetchPesan, type PesanResponse } from "@/lib/user-api";
+import { createPesanan, fetchPesan, type PesanLayananItem } from "@/lib/user-api";
 import { OrderDetailsPanel } from "./order-details-panel";
 import { OrderServiceGrid } from "./order-service-grid";
 import { OrderSummary } from "./order-summary";
@@ -28,8 +28,7 @@ import {
   OrderLoadingState,
 } from "./order-states";
 import type { OrderPageStatus } from "./types";
-import { useOutletServices } from "@/hooks/use-outlet-services";
-import { getOutletServiceIcon } from "@/lib/outlet-services";
+import { getOutletServiceIcon, suggestOutletServiceIconKey, type OutletServiceIconKey } from "@/lib/outlet-services";
 
 type PesanOrderPageProps = {
   status?: OrderPageStatus;
@@ -46,25 +45,36 @@ function clampQuantity(value: number, min: number, max: number) {
 }
 
 export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
-  const { services: outletServices } = useOutletServices();
+  const [apiServices, setApiServices] = useState<PesanLayananItem[]>([]);
+  const [fetchStatus, setFetchStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    fetchPesan()
+      .then((data) => {
+        setApiServices(data.pilihLayanan.items);
+        setFetchStatus("ready");
+      })
+      .catch(() => setFetchStatus("error"));
+  }, []);
+
   const serviceOptions = useMemo(
     () =>
-      outletServices
-        .filter((service) => service.active)
-        .map((service) => ({
-          id: service.id,
-          name: service.name,
-          description: service.description,
-          price: service.price,
-          unit: service.unit,
-          eta: service.eta,
-          badge: service.badge,
-          minQuantity: service.minQuantity,
-          maxQuantity: service.maxQuantity,
-          step: service.step,
-          icon: getOutletServiceIcon(service.iconKey),
-        })),
-    [outletServices],
+      apiServices.map((s) => ({
+        id: s.id_layanan,
+        name: s.nama,
+        description: s.deskripsi ?? "Layanan laundry berkualitas.",
+        price: s.harga,
+        unit: s.satuan as "kg" | "item",
+        eta: s.durasi || "2 hari",
+        badge: s.tipe,
+        minQuantity: s.min_quantity ?? 1,
+        maxQuantity: s.max_quantity ?? 12,
+        step: s.step_quantity ?? 0.5,
+        icon: getOutletServiceIcon(
+          (s.icon_key ?? suggestOutletServiceIconKey(s.nama)) as OutletServiceIconKey,
+        ),
+      })),
+    [apiServices],
   );
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const selectedService =
@@ -97,13 +107,6 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successOrder, setSuccessOrder] = useState<{ kodePesanan: string | null; total: number } | null>(null);
-  const [beServices, setBeServices] = useState<PesanResponse["pilihLayanan"]["items"]>([]);
-
-  useEffect(() => {
-    fetchPesan()
-      .then((data) => setBeServices(data.pilihLayanan.items))
-      .catch(() => {});
-  }, []);
 
   const selectedSlot = pickupSlots.find((slot) => slot.id === selectedSlotId);
   const selectedAddress = addressOptions.find(
@@ -171,11 +174,11 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
     );
   }
 
-  if (status === "loading") {
+  if (status === "loading" || fetchStatus === "loading") {
     return <OrderLoadingState />;
   }
 
-  if (status === "error") {
+  if (status === "error" || fetchStatus === "error") {
     return <OrderErrorState />;
   }
 
@@ -224,10 +227,9 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
 
     if (!selectedService) return;
 
-    const nameToMatch = selectedService.name.trim().toLowerCase();
     const beService =
-      beServices.find((s) => s.nama.trim().toLowerCase() === nameToMatch) ??
-      beServices[0];
+      apiServices.find((s) => s.id_layanan === selectedService.id) ??
+      apiServices[0];
 
     if (!beService) {
       setSubmitError("Layanan tidak tersedia. Pastikan admin telah menambahkan layanan ke outlet.");

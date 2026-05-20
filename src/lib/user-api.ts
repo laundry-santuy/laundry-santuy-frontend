@@ -121,6 +121,8 @@ export type ProfilResponse = {
     nama: string;
     username: string;
     email: string;
+    noTelepon: string | null;
+    alamat: string | null;
     role: string;
     inisial: string;
   };
@@ -135,6 +137,12 @@ export type ProfilResponse = {
     alamat: string;
     editable: boolean;
   };
+};
+
+export type UpdateProfilBody = {
+  nama_pengguna?: string;
+  no_telepon?: string;
+  alamat?: string;
 };
 
 export type CreatePesananBody = {
@@ -192,17 +200,24 @@ export function formatRupiah(value: number): string {
 
 // ── API functions ─────────────────────────────────────────────────────────────
 
+export type PesanLayananItem = {
+  id_layanan: string;
+  nama: string;
+  harga: number;
+  satuan: string;
+  tipe: string;
+  durasi: string;
+  id_laundry: string;
+  deskripsi: string | null;
+  icon_key: string | null;
+  min_quantity: number;
+  max_quantity: number;
+  step_quantity: number;
+};
+
 export type PesanResponse = {
   pilihLayanan: {
-    items: {
-      id_layanan: string;
-      nama: string;
-      harga: number;
-      satuan: string;
-      tipe: string;
-      durasi: string;
-      id_laundry: string;
-    }[];
+    items: PesanLayananItem[];
   };
   outletTersedia: {
     id_laundry: string;
@@ -241,4 +256,8 @@ export async function fetchProfilUser(): Promise<ProfilResponse> {
 
 export async function createPesanan(body: CreatePesananBody): Promise<CreatePesananResponse> {
   return apiClient.post<CreatePesananResponse>('/api/user/pesanan', body);
+}
+
+export async function updateProfilUser(body: UpdateProfilBody): Promise<{ message: string; data: unknown }> {
+  return apiClient.put('/api/user/profil', body);
 }
