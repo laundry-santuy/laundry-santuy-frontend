@@ -19,6 +19,7 @@ type ActiveOrderCardProps = {
   order: DriverActiveOrder;
   onAdvanceStage: (orderId: string) => void;
   onOpenDetail: (order: DriverActiveOrder) => void;
+  isPending?: boolean;
 };
 
 const stageTone = {
@@ -101,6 +102,7 @@ export function ActiveOrderCard({
   order,
   onAdvanceStage,
   onOpenDetail,
+  isPending = false,
 }: ActiveOrderCardProps) {
   const nextStage = getNextActiveStage(order.currentStage);
   const actionLabel = nextStage
@@ -211,10 +213,11 @@ export function ActiveOrderCard({
         </button>
         <button
           type="button"
+          disabled={isPending}
           onClick={() => onAdvanceStage(order.id)}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-extrabold text-white shadow-[0_14px_26px_rgba(0,88,202,0.22)] transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-extrabold text-white shadow-[0_14px_26px_rgba(0,88,202,0.22)] transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {actionLabel}
+          {isPending ? "Memproses..." : actionLabel}
         </button>
       </div>
     </article>

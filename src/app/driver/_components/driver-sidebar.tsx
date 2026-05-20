@@ -1,17 +1,22 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useDriverProfile } from "@/contexts/driver-profile-context";
 import { Bike, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { driverNavItems, driverProfile } from "./data";
+import { driverNavItems } from "./data";
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function DriverSidebar() {
-  const pathname = usePathname();
+  const pathname   = usePathname();
+  const { data }   = useDriverProfile();
+  const initials   = data?.profil.inisial   ?? "DR";
+  const driverName = data?.profil.nama      ?? "Driver";
+  const vehicle    = data?.profil.jenisKendaraan ?? "Kurir";
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-[292px] border-r border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-5 py-6 shadow-[18px_0_50px_rgba(25,28,29,0.05)] backdrop-blur-xl lg:block">
@@ -57,14 +62,14 @@ export function DriverSidebar() {
       <div className="absolute bottom-6 left-5 right-5 rounded-[28px] border border-primary-100 bg-primary-50/80 p-4">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-600 text-sm font-extrabold text-white">
-            {driverProfile.initials}
+            {initials}
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-extrabold text-[var(--odong-text)]">
-              {driverProfile.name}
+              {driverName}
             </p>
             <p className="mt-0.5 text-xs font-semibold text-primary-700">
-              {driverProfile.status} - Rating {driverProfile.rating}
+              {vehicle}
             </p>
           </div>
         </div>

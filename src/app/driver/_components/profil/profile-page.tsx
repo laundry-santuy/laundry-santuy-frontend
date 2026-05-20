@@ -1,62 +1,45 @@
+"use client";
+
 import Link from "next/link";
 import {
+  BadgeCheck,
+  Bell,
+  Bike,
+  CheckCircle2,
   ChevronRight,
+  CircleDollarSign,
   Clock3,
   LogOut,
+  Mail,
+  MapPin,
+  PackageCheck,
   PencilLine,
+  Phone,
   Sparkles,
   TrendingUp,
+  UsersRound,
   UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { driverProfile } from "../data";
-import {
-  driverAccountFields,
-  driverProfileDetail,
-  driverProfileStats,
-  driverRecentActivities,
-} from "./data";
+import { useEffect, useMemo, useState } from "react";
 import {
   DriverProfileEmptyState,
   DriverProfileErrorState,
   DriverProfileLoadingState,
 } from "./profile-states";
 import type { DriverPageStatus } from "../types";
+import {
+  fetchProfilDriver,
+  formatRupiah,
+  formatWaktuRelatif,
+  updateProfilDriver,
+  type DriverProfilData,
+} from "@/lib/driver-api";
+import { useDriverToast } from "@/hooks/use-driver-toast";
+import { DriverToastList } from "@/components/ui/driver-toast";
 
-type DriverProfilePageProps = {
-  status?: DriverPageStatus;
-};
-
-const statCardTone = {
-  primary: {
-    icon: "bg-primary-500 text-white",
-    line: "text-primary-600",
-  },
-  emerald: {
-    icon: "bg-emerald-500 text-white",
-    line: "text-emerald-600",
-  },
-  tertiary: {
-    icon: "bg-tertiary-500 text-white",
-    line: "text-tertiary-600",
-  },
-} as const;
-
-const activityTone = {
-  success: {
-    icon: "bg-emerald-50 text-emerald-600",
-    value: "text-[var(--odong-text)]",
-  },
-  warning: {
-    icon: "bg-amber-50 text-amber-600",
-    value: "text-[var(--odong-text)]",
-  },
-  primary: {
-    icon: "bg-primary-50 text-primary-600",
-    value: "text-[var(--odong-text)]",
-  },
-} as const;
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectionHeader({
   icon: Icon,
@@ -86,7 +69,7 @@ function SectionHeader({
   );
 }
 
-function ReadonlyField({
+function DisplayField({
   label,
   value,
   icon: Icon,
@@ -100,26 +83,121 @@ function ReadonlyField({
   return (
     <div className={cn("space-y-2", fullWidth && "md:col-span-2")}>
       <p className="text-sm font-bold text-[var(--odong-text)]">{label}</p>
-      <div className="relative rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-4 py-3 pr-12 shadow-[0_8px_18px_rgba(25,28,29,0.03)]">
+      <div className="rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-4 py-3 shadow-[0_8px_18px_rgba(25,28,29,0.03)]">
         <div className="flex items-center gap-3">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
             <Icon className="h-4 w-4" aria-hidden="true" />
           </span>
-          <p className="min-w-0 flex-1 text-sm font-semibold leading-6 text-[var(--odong-text)] sm:text-base">
+          <p className="min-w-0 flex-1 text-sm font-semibold leading-6 text-[var(--odong-muted)] sm:text-base">
             {value}
           </p>
         </div>
-        <button
-          type="button"
-          aria-label={`Edit ${label}`}
-          className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-primary-100 bg-white/80 text-primary-600 transition hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.96]"
-        >
-          <PencilLine className="h-4 w-4" aria-hidden="true" />
-        </button>
       </div>
     </div>
   );
 }
+
+function EditableField({
+  label,
+  value,
+  icon: Icon,
+  fullWidth,
+  fieldKey,
+  onSave,
+  isSaving,
+}: {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  fullWidth?: boolean;
+  fieldKey: string;
+  onSave: (key: string, val: string) => Promise<void>;
+  isSaving: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState(value);
+
+  const handleSave = async () => {
+    if (draft.trim() === value) { setEditing(false); return; }
+    await onSave(fieldKey, draft.trim());
+    setEditing(false);
+  };
+
+  const handleCancel = () => {
+    setDraft(value);
+    setEditing(false);
+  };
+
+  return (
+    <div className={cn("space-y-2", fullWidth && "md:col-span-2")}>
+      <p className="text-sm font-bold text-[var(--odong-text)]">{label}</p>
+      {editing ? (
+        <div className="rounded-2xl border border-primary-300 bg-[var(--odong-surface-strong)] px-4 py-3 shadow-[0_8px_18px_rgba(0,88,202,0.07)]">
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
+              <Icon className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSave();
+                if (e.key === "Escape") handleCancel();
+              }}
+              className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[var(--odong-text)] outline-none sm:text-base"
+            />
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={isSaving}
+              className="h-8 rounded-full border border-[var(--odong-border)] px-3 text-xs font-bold text-[var(--odong-muted)] transition hover:bg-[var(--odong-surface-muted)] disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="h-8 rounded-full bg-primary-600 px-3 text-xs font-bold text-white shadow-[0_4px_10px_rgba(0,88,202,0.20)] transition hover:bg-primary-700 disabled:opacity-50"
+            >
+              {isSaving ? "Menyimpan..." : "Simpan"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="relative rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-4 py-3 pr-12 shadow-[0_8px_18px_rgba(25,28,29,0.03)]">
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
+              <Icon className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <p className="min-w-0 flex-1 text-sm font-semibold leading-6 text-[var(--odong-text)] sm:text-base">
+              {value}
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label={`Edit ${label}`}
+            onClick={() => { setDraft(value); setEditing(true); }}
+            className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-primary-100 bg-white/80 text-primary-600 transition hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.96]"
+          >
+            <PencilLine className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type StatTone = "primary" | "emerald" | "tertiary";
+
+const statCardTone: Record<StatTone, { icon: string; line: string }> = {
+  primary:  { icon: "bg-primary-500 text-white",  line: "text-primary-600"  },
+  emerald:  { icon: "bg-emerald-500 text-white",  line: "text-emerald-600"  },
+  tertiary: { icon: "bg-tertiary-500 text-white", line: "text-tertiary-600" },
+};
 
 function StatCard({
   label,
@@ -127,7 +205,13 @@ function StatCard({
   description,
   icon: Icon,
   tone,
-}: (typeof driverProfileStats)[number]) {
+}: {
+  label: string;
+  value: string;
+  description: string;
+  icon: LucideIcon;
+  tone: StatTone;
+}) {
   return (
     <article className="rounded-[30px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-5 shadow-[0_18px_46px_rgba(25,28,29,0.07)] backdrop-blur-xl">
       <div className="flex items-start justify-between gap-4">
@@ -146,18 +230,21 @@ function StatCard({
           <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
       </div>
-      <p
-        className={cn(
-          "mt-4 inline-flex items-center gap-2 text-sm font-bold",
-          statCardTone[tone].line,
-        )}
-      >
+      <p className={cn("mt-4 inline-flex items-center gap-2 text-sm font-bold", statCardTone[tone].line)}>
         <TrendingUp className="h-4 w-4" aria-hidden="true" />
         {description}
       </p>
     </article>
   );
 }
+
+type ActivityTone = "success" | "warning" | "primary";
+
+const activityTone: Record<ActivityTone, { icon: string; value: string }> = {
+  success: { icon: "bg-emerald-50 text-emerald-600", value: "text-[var(--odong-text)]" },
+  warning: { icon: "bg-amber-50 text-amber-600",     value: "text-[var(--odong-text)]" },
+  primary: { icon: "bg-primary-50 text-primary-600", value: "text-[var(--odong-text)]" },
+};
 
 function ActivityRow({
   title,
@@ -166,7 +253,14 @@ function ActivityRow({
   rightCaption,
   icon: Icon,
   tone,
-}: (typeof driverRecentActivities)[number]) {
+}: {
+  title: string;
+  time: string;
+  icon: LucideIcon;
+  rightValue?: string;
+  rightCaption?: string;
+  tone: ActivityTone;
+}) {
   return (
     <article className="flex flex-col gap-4 rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-4 shadow-[0_14px_34px_rgba(25,28,29,0.045)] transition hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-start gap-4">
@@ -179,15 +273,10 @@ function ActivityRow({
           <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <h3 className="text-base font-extrabold text-[var(--odong-text)]">
-            {title}
-          </h3>
-          <p className="mt-1 text-sm leading-6 text-[var(--odong-muted)]">
-            {time}
-          </p>
+          <h3 className="text-base font-extrabold text-[var(--odong-text)]">{title}</h3>
+          <p className="mt-1 text-sm leading-6 text-[var(--odong-muted)]">{time}</p>
         </div>
       </div>
-
       <div className="flex shrink-0 items-end gap-3 sm:flex-col sm:items-end">
         {rightValue ? (
           <div className="text-right">
@@ -204,18 +293,106 @@ function ActivityRow({
   );
 }
 
-export function DriverProfilePage({ status = "ready" }: DriverProfilePageProps) {
-  if (status === "loading") {
-    return <DriverProfileLoadingState />;
-  }
+// ── Main component ────────────────────────────────────────────────────────────
 
-  if (status === "error") {
-    return <DriverProfileErrorState />;
-  }
+export function DriverProfilePage() {
+  const [data, setData]             = useState<DriverProfilData | null>(null);
+  const [pageStatus, setPageStatus] = useState<DriverPageStatus>("loading");
+  const [isSaving, setIsSaving]     = useState(false);
+  const { toasts, toast, dismiss }  = useDriverToast();
 
-  if (status === "empty") {
-    return <DriverProfileEmptyState />;
-  }
+  useEffect(() => {
+    let cancelled = false;
+    setPageStatus("loading");
+
+    fetchProfilDriver()
+      .then((res) => {
+        if (cancelled) return;
+        setData(res);
+        setPageStatus("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setPageStatus("error");
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleSaveField = async (fieldKey: string, value: string) => {
+    setIsSaving(true);
+    try {
+      const res = await updateProfilDriver({ [fieldKey]: value });
+      setData((prev) => {
+        if (!prev) return prev;
+        return { ...prev, profil: { ...prev.profil, [fieldKey]: value } };
+      });
+      toast(res.message, "success");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Gagal menyimpan perubahan", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const accountFields = useMemo(() => {
+    if (!data) return [];
+    const { profil } = data;
+    return [
+      { label: "Nama Akun",       value: profil.nama,           icon: UserRound,  fullWidth: true, editable: true,  fieldKey: "nama"          },
+      { label: "Email",           value: profil.email,          icon: Mail,                        editable: false                              },
+      { label: "Nomor Telepon",   value: profil.nomorTelepon,   icon: Phone,                       editable: true,  fieldKey: "nomorTelepon"  },
+      { label: "Alamat",          value: profil.alamat,         icon: MapPin,     fullWidth: true, editable: true,  fieldKey: "alamat"        },
+      { label: "Jenis Kendaraan", value: profil.jenisKendaraan, icon: Bike,                        editable: false                              },
+      { label: "Plat Nomor",      value: profil.platNomor,      icon: BadgeCheck,                  editable: true,  fieldKey: "platNomor"     },
+    ];
+  }, [data]);
+
+  const profileStats = useMemo(() => {
+    if (!data) return [];
+    const { statistik } = data;
+    return [
+      {
+        label:       "Total Pesanan",
+        value:       statistik.totalPesanan.toString(),
+        description: `${statistik.pesananSelesai} selesai`,
+        icon:        PackageCheck,
+        tone:        "primary"  as const,
+      },
+      {
+        label:       "Total Pendapatan",
+        value:       formatRupiah(statistik.totalPendapatan),
+        description: `dari ${statistik.pesananSelesai} order selesai`,
+        icon:        CircleDollarSign,
+        tone:        "emerald"  as const,
+      },
+      {
+        label:       "Pelanggan Aktif",
+        value:       statistik.pelangganAktif.toString(),
+        description: `dari ${statistik.totalPesanan} total order`,
+        icon:        UsersRound,
+        tone:        "tertiary" as const,
+      },
+    ];
+  }, [data]);
+
+  const recentActivities = useMemo(() => {
+    if (!data) return [];
+    return data.aktivitasTerbaru.map((a) => ({
+      id:           a.id,
+      title:        a.pesan,
+      time:         formatWaktuRelatif(a.waktu),
+      icon:         a.tipe === "order_selesai" ? CheckCircle2 : Bell,
+      rightValue:   a.nominal > 0 ? formatRupiah(a.nominal) : undefined,
+      rightCaption: a.tipe === "order_selesai" ? "Selesai" : "Aktivitas",
+      tone:         (a.tipe === "order_selesai" ? "success" : "primary") as ActivityTone,
+    }));
+  }, [data]);
+
+  if (pageStatus === "loading") return <DriverProfileLoadingState />;
+  if (pageStatus === "error")   return <DriverProfileErrorState />;
+  if (pageStatus === "empty" || !data) return <DriverProfileEmptyState />;
+
+  const { profil } = data;
 
   return (
     <div className="relative mx-auto min-h-screen w-full max-w-[1440px]">
@@ -242,36 +419,36 @@ export function DriverProfilePage({ status = "ready" }: DriverProfilePageProps) 
         <section className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)]">
           <article className="rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-6 text-center shadow-[0_18px_46px_rgba(25,28,29,0.07)] backdrop-blur-xl sm:p-7">
             <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-primary-700 text-4xl font-extrabold text-white shadow-[0_18px_32px_rgba(0,88,202,0.22)] sm:h-36 sm:w-36">
-              {driverProfile.initials}
+              {profil.inisial}
             </div>
 
             <h2 className="mt-5 text-2xl font-extrabold leading-tight text-[var(--odong-text)]">
-              {driverProfile.name}
+              {profil.nama}
             </h2>
             <p className="mt-2 text-sm font-medium text-[var(--odong-muted)]">
-              {driverProfileDetail.email}
+              {profil.email}
             </p>
 
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              {driverProfileDetail.onlineStatus}
+              Online
             </div>
 
             <div className="mt-6 grid grid-cols-2 overflow-hidden rounded-3xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)]">
               <div className="border-r border-[var(--odong-border)] px-4 py-4">
                 <p className="text-2xl font-extrabold text-[var(--odong-text)]">
-                  {driverProfileDetail.reviews}
+                  {data.statistik.totalPesanan}
                 </p>
                 <p className="mt-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--odong-muted)]">
-                  Ulasan
+                  Total Order
                 </p>
               </div>
               <div className="px-4 py-4">
                 <p className="text-2xl font-extrabold text-[var(--odong-text)]">
-                  {driverProfile.rating}
+                  {data.statistik.pesananSelesai}
                 </p>
                 <p className="mt-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--odong-muted)]">
-                  Ratings
+                  Selesai
                 </p>
               </div>
             </div>
@@ -291,17 +468,29 @@ export function DriverProfilePage({ status = "ready" }: DriverProfilePageProps) 
                 <PencilLine className="h-5 w-5" aria-hidden="true" />
               </span>
             </div>
-
             <div className="mt-5 grid gap-5 md:grid-cols-2">
-              {driverAccountFields.map((field) => (
-                <ReadonlyField
-                  key={field.label}
-                  label={field.label}
-                  value={field.value}
-                  icon={field.icon}
-                  fullWidth={field.fullWidth}
-                />
-              ))}
+              {accountFields.map((field) =>
+                field.editable ? (
+                  <EditableField
+                    key={field.label}
+                    label={field.label}
+                    value={field.value}
+                    icon={field.icon}
+                    fullWidth={"fullWidth" in field ? field.fullWidth : undefined}
+                    fieldKey={field.fieldKey!}
+                    onSave={handleSaveField}
+                    isSaving={isSaving}
+                  />
+                ) : (
+                  <DisplayField
+                    key={field.label}
+                    label={field.label}
+                    value={field.value}
+                    icon={field.icon}
+                    fullWidth={"fullWidth" in field ? field.fullWidth : undefined}
+                  />
+                ),
+              )}
             </div>
           </article>
         </section>
@@ -313,7 +502,7 @@ export function DriverProfilePage({ status = "ready" }: DriverProfilePageProps) 
             description="Ringkasan performa driver selama periode berjalan."
           />
           <div className="grid gap-4 md:grid-cols-3">
-            {driverProfileStats.map((stat) => (
+            {profileStats.map((stat) => (
               <StatCard key={stat.label} {...stat} />
             ))}
           </div>
@@ -325,11 +514,17 @@ export function DriverProfilePage({ status = "ready" }: DriverProfilePageProps) 
             title="Aktivitas Terbaru"
             description="Riwayat singkat kerja driver yang terakhir dikerjakan."
           />
-          <div className="space-y-3">
-            {driverRecentActivities.map((activity) => (
-              <ActivityRow key={activity.id} {...activity} />
-            ))}
-          </div>
+          {recentActivities.length > 0 ? (
+            <div className="space-y-3">
+              {recentActivities.map((activity) => (
+                <ActivityRow key={activity.id} {...activity} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--odong-muted)]">
+              Belum ada aktivitas terbaru.
+            </p>
+          )}
         </section>
 
         <Link
@@ -355,9 +550,11 @@ export function DriverProfilePage({ status = "ready" }: DriverProfilePageProps) 
         </Link>
 
         <span className="sr-only" aria-live="polite">
-          Profil {driverProfileDetail.name} terbuka.
+          Profil {profil.nama} terbuka.
         </span>
       </div>
+
+      <DriverToastList toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

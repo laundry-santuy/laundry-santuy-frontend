@@ -6,9 +6,8 @@ import {
   MapPinned,
   Sparkles,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  activeOrders,
   activeProcessStages,
   activeStageFilterMap,
   activeStageFilters,
@@ -29,64 +28,79 @@ import type {
   DriverActiveOrderFilter,
   DriverPageStatus,
 } from "../types";
-
-type ActiveOrdersPageProps = {
-  status?: DriverPageStatus;
-};
+import { fetchPesananAktif, updatePesananStatus } from "@/lib/driver-api";
+import { useDriverToast } from "@/hooks/use-driver-toast";
+import { DriverToastList } from "@/components/ui/driver-toast";
 
 const stageTone = {
   "menuju-lokasi": {
     chip: "bg-primary-50 text-primary-700",
     icon: "bg-primary-50 text-primary-700",
     line: "from-primary-500 to-primary-300",
-    bar: "bg-primary-500",
+    bar:  "bg-primary-500",
   },
   dijemput: {
     chip: "bg-cyan-50 text-cyan-700",
     icon: "bg-cyan-50 text-cyan-700",
     line: "from-cyan-500 to-cyan-300",
-    bar: "bg-cyan-500",
+    bar:  "bg-cyan-500",
   },
   "di-laundry": {
     chip: "bg-tertiary-50 text-tertiary-700",
     icon: "bg-tertiary-50 text-tertiary-700",
     line: "from-tertiary-500 to-tertiary-300",
-    bar: "bg-tertiary-500",
+    bar:  "bg-tertiary-500",
   },
   diantar: {
     chip: "bg-emerald-50 text-emerald-700",
     icon: "bg-emerald-50 text-emerald-700",
     line: "from-emerald-500 to-emerald-300",
-    bar: "bg-emerald-500",
+    bar:  "bg-emerald-500",
   },
 } as const;
 
 function getMapsUrl(address: string) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    address,
-  )}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 }
 
 function formatStageCount(count: number) {
   return `${count} order`;
 }
 
-export function ActiveOrdersPage({ status = "ready" }: ActiveOrdersPageProps) {
-  const [orders, setOrders] = useState<DriverActiveOrder[]>(activeOrders);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] =
-    useState<DriverActiveOrderFilter>("Semua");
+export function ActiveOrdersPage() {
+  const [orders, setOrders]         = useState<DriverActiveOrder[]>([]);
+  const [pageStatus, setPageStatus] = useState<DriverPageStatus>("loading");
+  const [pendingId, setPendingId]   = useState<string | null>(null);
+  const [searchQuery, setSearchQuery]     = useState("");
+  const [activeFilter, setActiveFilter]   = useState<DriverActiveOrderFilter>("Semua");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const { toasts, toast, dismiss }            = useDriverToast();
+
+  useEffect(() => {
+    let cancelled = false;
+    setPageStatus("loading");
+
+    fetchPesananAktif()
+      .then(({ orders: fetched }) => {
+        if (cancelled) return;
+        setOrders(fetched);
+        setPageStatus(fetched.length === 0 ? "empty" : "ready");
+      })
+      .catch(() => {
+        if (!cancelled) setPageStatus("error");
+      });
+
+    return () => { cancelled = true; };
+  }, []);
 
   const filteredOrders = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
+    const q = searchQuery.trim().toLowerCase();
     return orders.filter((order) => {
       const matchesFilter =
         activeFilter === "Semua" ||
         order.currentStage === activeStageFilterMap[activeFilter];
       const matchesQuery =
-        normalizedQuery.length === 0 ||
+        q.length === 0 ||
         [
           order.id,
           order.queueNumber,
@@ -102,88 +116,79 @@ export function ActiveOrdersPage({ status = "ready" }: ActiveOrdersPageProps) {
         ]
           .join(" ")
           .toLowerCase()
-          .includes(normalizedQuery);
-
+          .includes(q);
       return matchesFilter && matchesQuery;
     });
   }, [activeFilter, orders, searchQuery]);
 
-  const selectedOrder = orders.find((order) => order.id === selectedOrderId);
+  const selectedOrder = orders.find((o) => o.id === selectedOrderId);
 
   const stageStats = useMemo(
     () =>
       activeProcessStages.map((stage) => ({
         ...stage,
-        count: orders.filter((order) => order.currentStage === stage.id).length,
+        count: orders.filter((o) => o.currentStage === stage.id).length,
       })),
     [orders],
   );
 
-  const groupedOrders = useMemo(() => {
-    return activeProcessStages
-      .map((stage) => ({
-        ...stage,
-        count: filteredOrders.filter((order) => order.currentStage === stage.id)
-          .length,
-        orders: filteredOrders.filter((order) => order.currentStage === stage.id),
-      }))
-      .filter((stage) => stage.orders.length > 0);
-  }, [filteredOrders]);
+  const groupedOrders = useMemo(
+    () =>
+      activeProcessStages
+        .map((stage) => ({
+          ...stage,
+          count:  filteredOrders.filter((o) => o.currentStage === stage.id).length,
+          orders: filteredOrders.filter((o) => o.currentStage === stage.id),
+        }))
+        .filter((stage) => stage.orders.length > 0),
+    [filteredOrders],
+  );
 
   const nextOrder =
-    orders.find((order) => order.currentStage === "menuju-lokasi") ?? orders[0];
+    orders.find((o) => o.currentStage === "menuju-lokasi") ?? orders[0];
 
-  const stageCompletion = useMemo(() => {
-    const total = orders.length || 1;
+  const stageCompletion = useMemo(
+    () =>
+      stageStats.map((stage) => ({
+        ...stage,
+        ratio: Math.max(stage.count / Math.max(orders.length, 1), 0),
+      })),
+    [orders.length, stageStats],
+  );
 
-    return stageStats.map((stage) => ({
-      ...stage,
-      ratio: Math.max(stage.count / total, 0),
-    }));
-  }, [orders.length, stageStats]);
+  const handleAdvanceStage = async (orderId: string) => {
+    const current = orders.find((o) => o.id === orderId);
+    if (!current) return;
 
-  const handleAdvanceStage = (orderId: string) => {
-    const currentOrder = orders.find((order) => order.id === orderId);
+    setPendingId(orderId);
+    try {
+      const res = await updatePesananStatus(orderId, "advance");
+      const nextStage = getNextActiveStage(current.currentStage);
 
-    if (!currentOrder) {
-      return;
-    }
-
-    const nextStage = getNextActiveStage(currentOrder.currentStage);
-
-    if (!nextStage) {
-      setOrders((currentOrders) =>
-        currentOrders.filter((order) => order.id !== orderId),
-      );
-      if (selectedOrderId === orderId) {
-        setSelectedOrderId(null);
+      if (!nextStage) {
+        setOrders((cur) => cur.filter((o) => o.id !== orderId));
+        if (selectedOrderId === orderId) setSelectedOrderId(null);
+      } else {
+        setOrders((cur) =>
+          cur.map((o) =>
+            o.id === orderId ? { ...o, currentStage: nextStage } : o,
+          ),
+        );
       }
-      return;
+      toast(res.message, "success");
+    } catch (err) {
+      toast(
+        err instanceof Error ? err.message : "Gagal memperbarui status",
+        "error",
+      );
+    } finally {
+      setPendingId(null);
     }
-
-    setOrders((currentOrders) =>
-      currentOrders.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              currentStage: nextStage,
-            }
-          : order,
-      ),
-    );
   };
 
-  if (status === "loading") {
-    return <ActiveOrdersLoadingState />;
-  }
-
-  if (status === "error") {
-    return <ActiveOrdersErrorState />;
-  }
-
-  if (status === "empty" || orders.length === 0) {
-    return <ActiveOrdersEmptyState />;
-  }
+  if (pageStatus === "loading") return <ActiveOrdersLoadingState />;
+  if (pageStatus === "error")   return <ActiveOrdersErrorState />;
+  if (pageStatus === "empty" || orders.length === 0) return <ActiveOrdersEmptyState />;
 
   return (
     <div className="relative mx-auto min-h-screen w-full max-w-[1440px]">
@@ -204,7 +209,6 @@ export function ActiveOrdersPage({ status = "ready" }: ActiveOrdersPageProps) {
                 <div className="mt-4 flex flex-wrap gap-2">
                   {stageStats.map((stage) => {
                     const Icon = stage.icon;
-
                     return (
                       <span
                         key={stage.id}
@@ -270,7 +274,6 @@ export function ActiveOrdersPage({ status = "ready" }: ActiveOrdersPageProps) {
             <div className="mt-5 grid gap-3">
               {stageCompletion.map((stage) => {
                 const Icon = stage.icon;
-
                 return (
                   <div
                     key={stage.id}
@@ -335,7 +338,6 @@ export function ActiveOrdersPage({ status = "ready" }: ActiveOrdersPageProps) {
               <div className="space-y-5">
                 {groupedOrders.map((stage) => {
                   const Icon = stage.icon;
-
                   return (
                     <section
                       key={stage.id}
@@ -360,7 +362,6 @@ export function ActiveOrdersPage({ status = "ready" }: ActiveOrdersPageProps) {
                             </h3>
                           </div>
                         </div>
-
                         <span
                           className={cn(
                             "inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold",
@@ -377,10 +378,9 @@ export function ActiveOrdersPage({ status = "ready" }: ActiveOrdersPageProps) {
                           <ActiveOrderCard
                             key={order.id}
                             order={order}
+                            isPending={pendingId === order.id}
                             onAdvanceStage={handleAdvanceStage}
-                            onOpenDetail={(selectedOrder) =>
-                              setSelectedOrderId(selectedOrder.id)
-                            }
+                            onOpenDetail={(o) => setSelectedOrderId(o.id)}
                           />
                         ))}
                       </div>
@@ -402,11 +402,9 @@ export function ActiveOrdersPage({ status = "ready" }: ActiveOrdersPageProps) {
                 <h2 className="mt-2 text-xl font-extrabold text-[var(--odong-text)]">
                   Urutan kerja hari ini.
                 </h2>
-
                 <div className="mt-4 space-y-3">
                   {stageStats.map((stage) => {
                     const Icon = stage.icon;
-
                     return (
                       <div
                         key={stage.id}
@@ -432,20 +430,14 @@ export function ActiveOrdersPage({ status = "ready" }: ActiveOrdersPageProps) {
                             </div>
                           </div>
                           <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-extrabold text-primary-700">
-                            {Math.round(
-                              (stage.count / Math.max(orders.length, 1)) * 100,
-                            )}
-                            %
+                            {Math.round((stage.count / Math.max(orders.length, 1)) * 100)}%
                           </span>
                         </div>
                         <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--odong-surface)]">
                           <div
                             className={cn("h-full rounded-full", stageTone[stage.id].bar)}
                             style={{
-                              width: `${Math.max(
-                                (stage.count / Math.max(orders.length, 1)) * 100,
-                                8,
-                              )}%`,
+                              width: `${Math.max((stage.count / Math.max(orders.length, 1)) * 100, 8)}%`,
                             }}
                           />
                         </div>
@@ -487,6 +479,8 @@ export function ActiveOrdersPage({ status = "ready" }: ActiveOrdersPageProps) {
         onClose={() => setSelectedOrderId(null)}
         onAdvanceStage={handleAdvanceStage}
       />
+
+      <DriverToastList toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

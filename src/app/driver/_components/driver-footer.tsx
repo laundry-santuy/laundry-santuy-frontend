@@ -15,16 +15,6 @@ const footerNavigation = [
     links: [
       { label: "Update Order", href: "/driver/pesanan/aktif" },
       { label: "Pickup Masuk", href: "/driver/pesanan/masuk" },
-      { label: "Logout", href: "/auth/login/driver" },
-    ],
-  },
-  {
-    title: "Bantuan",
-    links: [
-      { label: "Profil", href: "/driver/profil" },
-      { label: "Keluar", href: "/auth/login/driver" },
-      { label: "Login", href: "/auth/login/driver" },
-      { label: "Daftar", href: "/auth/daftar/driver" },
     ],
   },
 ];
@@ -43,7 +33,7 @@ const contactItems = [
     icon: Mail,
   },
   {
-    label: "Setiap hari, 08.00 - 21.00",
+    label: "Setiap hari, 08.00-21.00 WIB",
     icon: Clock,
   },
 ];

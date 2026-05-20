@@ -1,15 +1,5 @@
-// src/app/user/beranda/page.tsx (contoh)
-"use client";
-import { usePathname } from "next/navigation";
+import { redirect } from "next/navigation";
 
-export default function LoginPage() {
-  const pathname = usePathname();
-  return (
-    <div className="p-4">
-      <p className="text-sm text-gray-500">
-        URL aktif: <code>{pathname}</code>
-      </p>
-      <h1 className="text-xl font-bold">Halaman Login</h1>
-    </div>
-  );
+export default function LoginRolePage() {
+  redirect("/auth/login");
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   MapPinned,
   Sparkles,
@@ -9,7 +9,7 @@ import {
   UserPlus,
   UserX,
 } from "lucide-react";
-import { driverIncomingOrders, driverStatusLabels } from "../data";
+import { driverStatusLabels } from "../data";
 import type {
   DriverIncomingOrder,
   DriverOrderFilter,
@@ -24,10 +24,9 @@ import {
   IncomingOrdersNoResultState,
 } from "./incoming-orders-states";
 import { IncomingOrdersToolbar } from "./incoming-orders-toolbar";
-
-type IncomingOrdersPageProps = {
-  status?: DriverPageStatus;
-};
+import { fetchPesananMasuk, updatePesananStatus } from "@/lib/driver-api";
+import { useDriverToast } from "@/hooks/use-driver-toast";
+import { DriverToastList } from "@/components/ui/driver-toast";
 
 const filters: DriverOrderFilter[] = [
   "Semua",
@@ -41,74 +40,81 @@ const statusFilterMap: Record<
   DriverOrderStatus
 > = {
   "Order Baru": "incoming",
-  Diterima: "accepted",
-  Ditolak: "rejected",
+  Diterima:     "accepted",
+  Ditolak:      "rejected",
 };
 
 const statConfig = [
-  {
-    key: "incoming",
-    label: "Order baru",
-    icon: UserPlus,
-  },
-  {
-    key: "accepted",
-    label: "Diterima",
-    icon: UserCheck,
-  },
-  {
-    key: "rejected",
-    label: "Ditolak",
-    icon: UserX,
-  },
+  { key: "incoming", label: "Order baru", icon: UserPlus  },
+  { key: "accepted", label: "Diterima",   icon: UserCheck },
+  { key: "rejected", label: "Ditolak",    icon: UserX     },
 ] as const;
 
 const statPillStyles = {
   incoming: {
-    pill: "border-primary-100 bg-white/85",
-    icon: "bg-primary-50 text-primary-600",
+    pill:  "border-primary-100 bg-white/85",
+    icon:  "bg-primary-50 text-primary-600",
     value: "text-primary-700",
   },
   accepted: {
-    pill: "border-emerald-100 bg-white/85",
-    icon: "bg-emerald-50 text-emerald-600",
+    pill:  "border-emerald-100 bg-white/85",
+    icon:  "bg-emerald-50 text-emerald-600",
     value: "text-emerald-700",
   },
   rejected: {
-    pill: "border-red-100 bg-white/85",
-    icon: "bg-red-50 text-red-600",
+    pill:  "border-red-100 bg-white/85",
+    icon:  "bg-red-50 text-red-600",
     value: "text-red-700",
   },
 } as const;
 
-export function IncomingOrdersPage({ status = "ready" }: IncomingOrdersPageProps) {
-  const [orders, setOrders] =
-    useState<DriverIncomingOrder[]>(driverIncomingOrders);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] =
-    useState<DriverOrderFilter>("Semua");
+export function IncomingOrdersPage() {
+  const [orders, setOrders]         = useState<DriverIncomingOrder[]>([]);
+  const [pageStatus, setPageStatus] = useState<DriverPageStatus>("loading");
+  const [pendingId, setPendingId]   = useState<string | null>(null);
+  const [searchQuery, setSearchQuery]   = useState("");
+  const [activeFilter, setActiveFilter] = useState<DriverOrderFilter>("Semua");
+  const { toasts, toast, dismiss }      = useDriverToast();
 
-  const stats = useMemo(() => {
-    return statConfig.map((item) => ({
-      ...item,
-      value: orders.filter((order) => order.status === item.key).length,
-    }));
-  }, [orders]);
+  useEffect(() => {
+    let cancelled = false;
+    setPageStatus("loading");
+
+    fetchPesananMasuk()
+      .then(({ orders: fetched }) => {
+        if (cancelled) return;
+        setOrders(fetched);
+        setPageStatus(fetched.length === 0 ? "empty" : "ready");
+      })
+      .catch(() => {
+        if (!cancelled) setPageStatus("error");
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  const stats = useMemo(
+    () =>
+      statConfig.map((item) => ({
+        ...item,
+        value: orders.filter((o) => o.status === item.key).length,
+      })),
+    [orders],
+  );
 
   const incomingOrders = useMemo(
-    () => orders.filter((order) => order.status === "incoming"),
+    () => orders.filter((o) => o.status === "incoming"),
     [orders],
   );
 
   const filteredOrders = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
+    const q = searchQuery.trim().toLowerCase();
     return orders.filter((order) => {
       const matchesFilter =
         activeFilter === "Semua" ||
         order.status === statusFilterMap[activeFilter];
       const matchesQuery =
-        normalizedQuery.length === 0 ||
+        q.length === 0 ||
         [
           order.id,
           order.customerName,
@@ -119,34 +125,39 @@ export function IncomingOrdersPage({ status = "ready" }: IncomingOrdersPageProps
         ]
           .join(" ")
           .toLowerCase()
-          .includes(normalizedQuery);
-
+          .includes(q);
       return matchesFilter && matchesQuery;
     });
   }, [activeFilter, orders, searchQuery]);
 
   const nextPickupOrder = incomingOrders[0] ?? orders[0];
-  const priorityOrders = incomingOrders.slice(0, 3);
+  const priorityOrders  = incomingOrders.slice(0, 3);
 
-  const handleUpdateStatus = (orderId: string, nextStatus: DriverOrderStatus) => {
-    setOrders((currentOrders) =>
-      currentOrders.map((order) =>
-        order.id === orderId ? { ...order, status: nextStatus } : order,
-      ),
-    );
+  const handleUpdateStatus = async (
+    orderId: string,
+    nextStatus: DriverOrderStatus,
+  ) => {
+    const action = nextStatus === "accepted" ? "terima" : "tolak";
+    setPendingId(orderId);
+    try {
+      const res = await updatePesananStatus(orderId, action);
+      setOrders((cur) =>
+        cur.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o)),
+      );
+      toast(res.message, "success");
+    } catch (err) {
+      toast(
+        err instanceof Error ? err.message : "Gagal memperbarui status",
+        "error",
+      );
+    } finally {
+      setPendingId(null);
+    }
   };
 
-  if (status === "loading") {
-    return <IncomingOrdersLoadingState />;
-  }
-
-  if (status === "error") {
-    return <IncomingOrdersErrorState />;
-  }
-
-  if (status === "empty" || orders.length === 0) {
-    return <IncomingOrdersEmptyState />;
-  }
+  if (pageStatus === "loading") return <IncomingOrdersLoadingState />;
+  if (pageStatus === "error")   return <IncomingOrdersErrorState />;
+  if (pageStatus === "empty" || orders.length === 0) return <IncomingOrdersEmptyState />;
 
   return (
     <div className="relative mx-auto min-h-screen w-full max-w-[1440px]">
@@ -167,7 +178,6 @@ export function IncomingOrdersPage({ status = "ready" }: IncomingOrdersPageProps
                 <div className="mt-4 flex flex-wrap gap-2">
                   {stats.map((stat) => {
                     const Icon = stat.icon;
-
                     return (
                       <span
                         key={stat.key}
@@ -201,7 +211,6 @@ export function IncomingOrdersPage({ status = "ready" }: IncomingOrdersPageProps
                   Cek pelanggan, lihat estimasi, buka rute ke Maps, lalu terima
                   order tanpa meninggalkan alur kerja driver.
                 </p>
-
               </div>
             </div>
           </div>
@@ -256,6 +265,7 @@ export function IncomingOrdersPage({ status = "ready" }: IncomingOrdersPageProps
                     key={order.id}
                     order={order}
                     onUpdateStatus={handleUpdateStatus}
+                    isPending={pendingId === order.id}
                   />
                 ))}
               </section>
@@ -273,7 +283,6 @@ export function IncomingOrdersPage({ status = "ready" }: IncomingOrdersPageProps
                 <h2 className="mt-2 text-xl font-extrabold text-[var(--odong-text)]">
                   3 order terdekat
                 </h2>
-
                 <div className="mt-4 space-y-3">
                   {priorityOrders.map((order, index) => (
                     <div
@@ -298,6 +307,11 @@ export function IncomingOrdersPage({ status = "ready" }: IncomingOrdersPageProps
                       </div>
                     </div>
                   ))}
+                  {priorityOrders.length === 0 && (
+                    <p className="text-sm text-[var(--odong-muted)]">
+                      Tidak ada order baru saat ini.
+                    </p>
+                  )}
                 </div>
               </section>
 
@@ -318,6 +332,8 @@ export function IncomingOrdersPage({ status = "ready" }: IncomingOrdersPageProps
           {filteredOrders.length} pesanan tampil dengan filter {activeFilter}.
         </span>
       </div>
+
+      <DriverToastList toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

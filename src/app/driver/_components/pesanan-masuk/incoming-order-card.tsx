@@ -14,6 +14,7 @@ import type { DriverIncomingOrder, DriverOrderStatus } from "../types";
 type IncomingOrderCardProps = {
   order: DriverIncomingOrder;
   onUpdateStatus: (orderId: string, status: DriverOrderStatus) => void;
+  isPending?: boolean;
 };
 
 const statusStyles = {
@@ -67,6 +68,7 @@ function OrderMeta({ label, value, tone = "default" }: OrderMetaProps) {
 export function IncomingOrderCard({
   order,
   onUpdateStatus,
+  isPending = false,
 }: IncomingOrderCardProps) {
   const mapsUrl = getMapsUrl(order.address);
   const isIncoming = order.status === "incoming";
@@ -166,19 +168,21 @@ export function IncomingOrderCard({
         <div className="mt-4 grid grid-cols-2 gap-3">
           <button
             type="button"
+            disabled={isPending}
             onClick={() => onUpdateStatus(order.id, "rejected")}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white/80 px-4 text-sm font-extrabold text-red-600 transition hover:-translate-y-0.5 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 active:scale-[0.98]"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white/80 px-4 text-sm font-extrabold text-red-600 transition hover:-translate-y-0.5 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <X className="h-4 w-4" aria-hidden="true" />
             Tolak
           </button>
           <button
             type="button"
+            disabled={isPending}
             onClick={() => onUpdateStatus(order.id, "accepted")}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-extrabold text-white shadow-[0_14px_26px_rgba(0,88,202,0.22)] transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-extrabold text-white shadow-[0_14px_26px_rgba(0,88,202,0.22)] transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Check className="h-4 w-4" aria-hidden="true" />
-            Ambil
+            {isPending ? "Memproses..." : "Ambil"}
           </button>
         </div>
       ) : (
