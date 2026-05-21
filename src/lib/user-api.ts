@@ -71,6 +71,7 @@ export type LacakResponse = {
     id_pesanan: string;
     kodePesanan: string;
     namaLayanan: string;
+    namaOutlet: string | null;
     berat: number;
     total: number;
     status: string;

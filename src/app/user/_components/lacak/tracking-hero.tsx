@@ -11,9 +11,10 @@ import type { TrackingInsight, TrackingOrder } from "./types";
 type TrackingHeroProps = {
   order: TrackingOrder;
   insights: TrackingInsight[];
+  onRefresh?: () => void;
 };
 
-export function TrackingHero({ order, insights }: TrackingHeroProps) {
+export function TrackingHero({ order, insights, onRefresh }: TrackingHeroProps) {
   return (
     <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-stretch">
       <div className="overflow-hidden rounded-[32px] border border-primary-100 dark:border-[var(--odong-border)] bg-primary-50/80 dark:bg-[var(--odong-surface-soft)] p-6 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-8">
@@ -78,7 +79,7 @@ export function TrackingHero({ order, insights }: TrackingHeroProps) {
       <aside className="rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-6 shadow-[0_18px_46px_rgba(25,28,29,0.07)] backdrop-blur-xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-700">
+            <p className="inline-flex items-center gap-2 rounded-full bg-primary-50 dark:bg-primary-900/40 px-3 py-1.5 text-xs font-bold text-primary-700 dark:text-primary-300">
               <Clock className="h-3.5 w-3.5" aria-hidden="true" />
               {order.eta}
             </p>
@@ -99,7 +100,7 @@ export function TrackingHero({ order, insights }: TrackingHeroProps) {
             <span>Progress order</span>
             <span>{order.progress}%</span>
           </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-primary-100">
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-primary-100 dark:bg-primary-900/50">
             <div
               className="h-full rounded-full bg-primary-600 transition-all duration-500"
               style={{ width: `${order.progress}%` }}
@@ -120,7 +121,8 @@ export function TrackingHero({ order, insights }: TrackingHeroProps) {
           </Link>
           <button
             type="button"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-primary-100 bg-primary-50 px-4 text-sm font-bold text-primary-700 transition hover:-translate-y-0.5 hover:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
+            onClick={onRefresh}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-primary-100 dark:border-primary-800/50 bg-primary-50 dark:bg-primary-900/30 px-4 text-sm font-bold text-primary-700 dark:text-primary-300 transition hover:-translate-y-0.5 hover:bg-primary-100 dark:hover:bg-primary-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
           >
             <RefreshCcw className="h-4 w-4" aria-hidden="true" />
             Refresh

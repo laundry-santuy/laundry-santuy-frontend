@@ -111,6 +111,11 @@ function buildTimeline(
   });
 }
 
+function calcProgress(steps: LacakResponse["statusPerjalanan"]): number {
+  if (!steps.length) return 0;
+  return Math.round((steps.filter((s) => s.completed).length / steps.length) * 100);
+}
+
 function mapToTrackingOrder(data: LacakResponse): TrackingOrder {
   const detail = data.detailPesanan ?? data.pesananAktif;
   const kurir  = data.infoKurir;
@@ -124,12 +129,12 @@ function mapToTrackingOrder(data: LacakResponse): TrackingOrder {
     statusDescription: "Status pesanan kamu diperbarui secara real-time.",
     tone: "active",
     eta: peta ? `${peta.estimasiTibaMenit} menit` : "-",
-    progress: 50,
-    updatedAt: `Diperbarui baru saja`,
+    progress: calcProgress(data.statusPerjalanan),
+    updatedAt: "Diperbarui baru saja",
     weight: `${detail?.berat ?? 0} kg`,
     total: formatRupiah(detail?.total ?? 0),
     pickupWindow: detail ? formatWaktu(detail.waktu) : "-",
-    outlet: "-",
+    outlet: (detail && "namaOutlet" in detail ? detail.namaOutlet : null) ?? "-",
     payment: "-",
     pickup: {
       label: alamat?.label ?? "Rumah",
@@ -156,15 +161,19 @@ function mapToTrackingOrder(data: LacakResponse): TrackingOrder {
 export function TrackingPage({ status: propStatus = "ready" }: TrackingPageProps) {
   const [pageStatus, setPageStatus] = useState<TrackingPageStatus>("loading");
   const [apiData, setApiData] = useState<LacakResponse | null>(null);
+  const [fetchKey, setFetchKey] = useState(0);
 
   useEffect(() => {
+    setPageStatus("loading");
     fetchLacak()
       .then((data) => {
         setApiData(data);
         setPageStatus(data.detailPesanan || data.pesananAktif ? "ready" : "empty");
       })
       .catch(() => setPageStatus("error"));
-  }, []);
+  }, [fetchKey]);
+
+  const handleRefresh = () => setFetchKey((k) => k + 1);
 
   const trackingOrder = useMemo(
     () => (apiData ? mapToTrackingOrder(apiData) : null),
@@ -184,7 +193,7 @@ export function TrackingPage({ status: propStatus = "ready" }: TrackingPageProps
       </div>
 
       <div className="relative z-10 space-y-5">
-        <TrackingHero order={trackingOrder} insights={STATIC_INSIGHTS} />
+        <TrackingHero order={trackingOrder} insights={STATIC_INSIGHTS} onRefresh={handleRefresh} />
 
         <TrackingOrderSwitcher
           orders={[trackingOrder]}

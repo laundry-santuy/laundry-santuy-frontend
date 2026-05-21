@@ -24,7 +24,7 @@ export function TrackingOrderSwitcher({
             Pilih order yang ingin dipantau.
           </h2>
         </div>
-        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-700">
+        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-primary-50 dark:bg-primary-900/40 px-3 py-1.5 text-xs font-bold text-primary-700 dark:text-primary-300">
           <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
           {orders.length} order aktif
         </span>
@@ -43,7 +43,7 @@ export function TrackingOrderSwitcher({
               className={cn(
                 "group rounded-[24px] border p-4 text-left shadow-[0_10px_26px_rgba(25,28,29,0.04)] transition duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.99]",
                 selected
-                  ? "border-primary-200 bg-primary-50"
+                  ? "border-primary-200 dark:border-primary-700/50 bg-primary-50 dark:bg-primary-900/30"
                   : "border-[var(--odong-border)] bg-[var(--odong-surface-strong)] hover:border-primary-100",
               )}
             >
@@ -61,7 +61,7 @@ export function TrackingOrderSwitcher({
                     "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition",
                     selected
                       ? "bg-primary-600 text-white"
-                      : "bg-primary-50 text-primary-600 group-hover:bg-primary-600 group-hover:text-white",
+                      : "bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-300 group-hover:bg-primary-600 group-hover:text-white",
                   )}
                 >
                   {order.tone === "active" ? (
@@ -77,7 +77,7 @@ export function TrackingOrderSwitcher({
                   <span>{order.statusLabel}</span>
                   <span>{order.progress}%</span>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-primary-100">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-primary-100 dark:bg-primary-900/50">
                   <div
                     className="h-full rounded-full bg-primary-600 transition-all duration-500"
                     style={{ width: `${order.progress}%` }}

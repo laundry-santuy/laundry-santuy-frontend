@@ -42,7 +42,7 @@ export function TrackingTimeline({ steps }: TrackingTimelineProps) {
                   step.status === "done" &&
                     "border-primary-500 bg-primary-500 text-white shadow-[0_10px_20px_rgba(38,113,238,0.20)]",
                   step.status === "current" &&
-                    "border-primary-500 bg-primary-50 text-primary-600 shadow-[0_0_0_5px_rgba(38,113,238,0.08)]",
+                    "border-primary-500 bg-primary-50 dark:bg-primary-900/40 text-primary-600 dark:text-primary-300 shadow-[0_0_0_5px_rgba(38,113,238,0.08)]",
                   step.status === "upcoming" &&
                     "border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-muted-soft)]",
                 )}
@@ -54,7 +54,7 @@ export function TrackingTimeline({ steps }: TrackingTimelineProps) {
                 className={cn(
                   "min-w-0 flex-1 rounded-[24px] border p-4 transition duration-200",
                   step.status === "current"
-                    ? "border-primary-100 bg-primary-50"
+                    ? "border-primary-100 dark:border-primary-800/50 bg-primary-50 dark:bg-primary-900/25"
                     : "border-[var(--odong-border)] bg-[var(--odong-surface-strong)]",
                 )}
               >
@@ -68,7 +68,7 @@ export function TrackingTimeline({ steps }: TrackingTimelineProps) {
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
-                    <span className="rounded-full bg-[var(--odong-surface-strong)] px-3 py-1 text-xs font-bold text-primary-700">
+                    <span className="rounded-full bg-[var(--odong-surface-strong)] px-3 py-1 text-xs font-bold text-primary-700 dark:text-primary-300">
                       {stepCopy[step.status]}
                     </span>
                     <span className="rounded-full bg-[var(--odong-surface-strong)] px-3 py-1 text-xs font-semibold text-[var(--odong-muted)]">

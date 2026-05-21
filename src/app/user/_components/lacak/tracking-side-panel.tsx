@@ -21,7 +21,7 @@ export function TrackingSidePanel({
   return (
     <aside className="flex h-full flex-col gap-5">
       <section className="rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-6 shadow-[0_18px_46px_rgba(25,28,29,0.07)] backdrop-blur-xl">
-        <p className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-700">
+        <p className="inline-flex items-center gap-2 rounded-full bg-primary-50 dark:bg-primary-900/40 px-3 py-1.5 text-xs font-bold text-primary-700 dark:text-primary-300">
           <Truck className="h-3.5 w-3.5" aria-hidden="true" />
           Kurir aktif
         </p>
@@ -63,7 +63,7 @@ export function TrackingSidePanel({
           <button
             type="button"
             aria-label={`Kirim pesan ke kurir ${order.courier.name}`}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-primary-100 bg-primary-50 px-4 text-sm font-bold text-primary-700 transition hover:-translate-y-0.5 hover:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-primary-100 dark:border-primary-800/50 bg-primary-50 dark:bg-primary-900/30 px-4 text-sm font-bold text-primary-700 dark:text-primary-300 transition hover:-translate-y-0.5 hover:bg-primary-100 dark:hover:bg-primary-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
           >
             <MessageCircle className="h-4 w-4" aria-hidden="true" />
             Chat
@@ -72,7 +72,7 @@ export function TrackingSidePanel({
       </section>
 
       <section className="rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-6 shadow-[0_18px_46px_rgba(25,28,29,0.07)] backdrop-blur-xl">
-        <p className="text-sm font-semibold text-primary-700">
+        <p className="text-sm font-semibold text-primary-700 dark:text-primary-300">
           Ringkasan order
         </p>
         <h2 className="mt-1 text-2xl font-extrabold text-[var(--odong-text)]">
@@ -126,7 +126,7 @@ export function TrackingSidePanel({
       </section>
 
       <section className="rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface-soft)] p-6 shadow-[0_14px_34px_rgba(25,28,29,0.045)] backdrop-blur-xl">
-        <p className="text-sm font-semibold text-primary-700">
+        <p className="text-sm font-semibold text-primary-700 dark:text-primary-300">
           Quality checkpoint
         </p>
         <div className="mt-4 space-y-3">
@@ -138,7 +138,7 @@ export function TrackingSidePanel({
                 key={checkpoint.title}
                 className="flex items-start gap-3 rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-4"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-600">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary-50 dark:bg-primary-900/40 text-primary-600 dark:text-primary-300">
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div>
