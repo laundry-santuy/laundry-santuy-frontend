@@ -584,7 +584,26 @@ export function OrderStatusCard({ data }: OrderStatusCardProps) {
   );
 }
 
-export function TopOutletCard() {
+type TopOutletCardProps = {
+  data?: { rank: number; name: string; orders: number; revenue: number }[];
+};
+
+export function TopOutletCard({ data }: TopOutletCardProps) {
+  // Format revenue number to display format
+  const formatRevenueDisplay = (value: number): string => {
+    if (value >= 1000000) {
+      const juta = value / 1000000;
+      return `Rp ${juta.toLocaleString("id-ID", { maximumFractionDigits: 1 })} Jt`;
+    }
+    if (value >= 1000) {
+      const ribu = value / 1000;
+      return `Rp ${ribu.toLocaleString("id-ID", { maximumFractionDigits: 0 })}rb`;
+    }
+    return `Rp ${value.toLocaleString("id-ID")}`;
+  };
+
+  const activeOutlets = data || topOutlets;
+
   return (
     <Card>
       <DashboardCardHeader
@@ -595,7 +614,7 @@ export function TopOutletCard() {
 
       <CardContent className="pt-6">
         <ol className="divide-y divide-[var(--odong-border)]">
-          {topOutlets.map((outlet) => (
+          {activeOutlets.map((outlet) => (
             <li
               key={outlet.rank}
               className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
@@ -616,7 +635,7 @@ export function TopOutletCard() {
 
               <div className="text-right">
                 <p className="text-lg font-extrabold text-[var(--odong-text)]">
-                  {outlet.revenue}
+                  {typeof outlet.revenue === 'string' ? outlet.revenue : formatRevenueDisplay(outlet.revenue)}
                 </p>
                 <p className="text-sm text-[var(--odong-muted-soft)]">
                   Pendapatan
@@ -630,7 +649,23 @@ export function TopOutletCard() {
   );
 }
 
-export function LatestActivityCard() {
+type LatestActivityCardProps = {
+  data?: { id: string; pesan: string; waktu: string; harga: number }[];
+};
+
+export function LatestActivityCard({ data }: LatestActivityCardProps) {
+  // Transform backend data to component format
+  const transformedActivities = data ? data.map((activity) => ({
+    id: activity.id,
+    title: activity.pesan,
+    time: activity.waktu,
+    tone: activity.pesan.toLowerCase().includes('batalkan') || activity.pesan.toLowerCase().includes('baru')
+      ? 'danger' as const
+      : activity.pesan.toLowerCase().includes('kapasitas') || activity.pesan.toLowerCase().includes('warning')
+        ? 'warning' as const
+        : 'success' as const,
+  })) : adminActivities;
+
   return (
     <Card>
       <DashboardCardHeader
@@ -641,7 +676,7 @@ export function LatestActivityCard() {
 
       <CardContent className="pt-6">
         <ul className="divide-y divide-[var(--odong-border)]">
-          {adminActivities.map((activity) => {
+          {transformedActivities.map((activity) => {
             const toneClass =
               activity.tone === "danger"
                 ? "bg-rose-50 text-rose-600"
