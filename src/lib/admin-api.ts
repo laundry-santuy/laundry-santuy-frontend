@@ -5,6 +5,11 @@ import {
   type OutletServiceIconKey,
 } from './outlet-services';
 
+function withCacheBuster(path: string): string {
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}_ts=${Date.now()}`;
+}
+
 // ── Backend response types ────────────────────────────────────────────────────
 
 export type LayananBackend = {
@@ -22,16 +27,22 @@ export type LayananBackend = {
   stepQuantity: number;
 };
 
+export type OutletBackend = {
+  id_outlet: string | null;
+  namaOutlet: string;
+  alamatOutlet: string;
+  email: string;
+  nomorTelepon: string;
+  latitude: number | null;
+  longitude: number | null;
+  jamMulai: string | null;
+  jamSelesai: string | null;
+};
+
 export type PengaturanOutletResponse = {
-  pengaturanOutlet: {
-    id_outlet: string;
-    namaOutlet: string;
-    alamatOutlet: string;
-    jamMulai: string | null;
-    jamSelesai: string | null;
-  };
+  pengaturanOutlet: OutletBackend;
+  semuaOutlet: OutletBackend[];
   layananOutlet: LayananBackend[];
-  semuaOutlet: { id: string; nama: string }[];
 };
 
 export type CreateLayananBody = {
@@ -195,7 +206,7 @@ export function fetchDashboard(): Promise<DashboardResponse> {
 }
 
 export function fetchPengaturanOutlet(): Promise<PengaturanOutletResponse> {
-  return apiClient.get<PengaturanOutletResponse>('/api/admin/pengaturan-outlet');
+  return apiClient.get<PengaturanOutletResponse>(withCacheBuster('/api/admin/pengaturan-outlet'));
 }
 
 export function createLayanan(
@@ -218,15 +229,15 @@ export function deleteLayanan(id: string): Promise<{ message: string }> {
 // ── Settings API calls ────────────────────────────────────────────────────────
 
 export function fetchPengaturanUmum(): Promise<PengaturanUmumResponse> {
-  return apiClient.get<PengaturanUmumResponse>('/api/admin/pengaturan-umum');
+  return apiClient.get<PengaturanUmumResponse>(withCacheBuster('/api/admin/pengaturan-umum'));
 }
 
 export function fetchDashboardHargaPromo(): Promise<DashboardHargaPromoResponse> {
-  return apiClient.get<DashboardHargaPromoResponse>('/api/admin/dashboard-harga-promo');
+  return apiClient.get<DashboardHargaPromoResponse>(withCacheBuster('/api/admin/dashboard-harga-promo'));
 }
 
 export function fetchPengaturanKeamanan(): Promise<PengaturanKeamananResponse> {
-  return apiClient.get<PengaturanKeamananResponse>('/api/admin/pengaturan-keamanan');
+  return apiClient.get<PengaturanKeamananResponse>(withCacheBuster('/api/admin/pengaturan-keamanan'));
 }
 
 export type UpdatePengaturanUmumBody = {
@@ -248,10 +259,31 @@ export type UpdatePengaturanOutletBody = {
   alamatOutlet?: string;
   email?: string;
   nomorTelepon?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   jamMulai?: string | null;
   jamSelesai?: string | null;
 };
 
 export function updatePengaturanOutlet(body: UpdatePengaturanOutletBody): Promise<{ message: string }> {
   return apiClient.put('/api/admin/pengaturan-outlet', body);
+}
+
+export type CreatePengaturanOutletBody = {
+  namaOutlet: string;
+  alamatOutlet?: string;
+  email?: string;
+  nomorTelepon?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  jamMulai?: string | null;
+  jamSelesai?: string | null;
+};
+
+export function createPengaturanOutlet(body: CreatePengaturanOutletBody): Promise<{ message: string; pengaturanOutlet: OutletBackend }> {
+  return apiClient.post('/api/admin/pengaturan-outlet', body);
+}
+
+export function deletePengaturanOutlet(idOutlet: string): Promise<{ message: string }> {
+  return apiClient.del(`/api/admin/pengaturan-outlet/${idOutlet}`);
 }
