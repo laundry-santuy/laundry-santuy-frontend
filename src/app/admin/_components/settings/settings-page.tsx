@@ -37,12 +37,14 @@ import {
   adminSelectClass,
 } from "../admin-page";
 import { OutletServicesPanel } from "./outlet-services-panel";
+import { updatePengaturanUmum, updatePengaturanOutlet } from "@/lib/admin-api";
 import { PromoCodesPanel } from "./promo-codes-panel";
 import {
   EmailSettingsPanel,
   SaveStatusCard,
   SecuritySettingsPanel,
 } from "./settings-side-panels";
+import type { SettingsData } from "./settings-client";
 
 type SettingSectionId =
   | "umum"
@@ -384,9 +386,55 @@ function SectionHint({
   );
 }
 
-export function AdminSettingsPage() {
+export function AdminSettingsPage({
+  settingsData,
+}: {
+  settingsData?: SettingsData | null;
+}) {
+  // Initialize settings from real data or use defaults
+  const getInitialSettings = (): AdminSettingValues => {
+    if (!settingsData?.umum || !settingsData?.outlet) {
+      return defaultAdminSettings;
+    }
+
+    const umum = settingsData.umum;
+    const outlet = settingsData.outlet;
+    const hargaPromo = settingsData.hargaPromo;
+    const keamanan = settingsData.keamanan;
+
+    return {
+      ...defaultAdminSettings,
+      // General settings
+      businessName: umum.informasiAplikasi?.namaAplikasi || defaultAdminSettings.businessName,
+      tagline: umum.informasiAplikasi?.tagline || defaultAdminSettings.tagline,
+      supportEmail: umum.informasiAplikasi?.email || defaultAdminSettings.supportEmail,
+      supportPhone: umum.informasiAplikasi?.nomorTelepon || defaultAdminSettings.supportPhone,
+      headquartersAddress: umum.informasiAplikasi?.alamatPusat || defaultAdminSettings.headquartersAddress,
+      pickupDeliveryEnabled: umum.fiturAplikasi?.pickupAndDelivery ?? defaultAdminSettings.pickupDeliveryEnabled,
+      aiSuggestionsEnabled: umum.fiturAplikasi?.aiSuggestions ?? defaultAdminSettings.aiSuggestionsEnabled,
+      liveTrackingEnabled: umum.fiturAplikasi?.liveTracking ?? defaultAdminSettings.liveTrackingEnabled,
+      pushNotificationsEnabled: umum.fiturAplikasi?.pushNotifications ?? defaultAdminSettings.pushNotificationsEnabled,
+      multiLanguageEnabled: umum.fiturAplikasi?.multiLanguage ?? defaultAdminSettings.multiLanguageEnabled,
+
+      // Outlet settings
+      defaultOutlet: outlet.pengaturanOutlet?.namaOutlet || defaultAdminSettings.defaultOutlet,
+      outletAddress: outlet.pengaturanOutlet?.alamatOutlet || defaultAdminSettings.outletAddress,
+      openTime: outlet.pengaturanOutlet?.jamMulai || defaultAdminSettings.openTime,
+      closeTime: outlet.pengaturanOutlet?.jamSelesai || defaultAdminSettings.closeTime,
+
+      // Pricing settings  
+      minimumOrder: hargaPromo?.pengaturanHarga?.hargaMinimum.toString() || defaultAdminSettings.minimumOrder,
+      pricePerKg: hargaPromo?.pengaturanHarga?.hargaMaksimum.toString() || defaultAdminSettings.pricePerKg,
+      expressSurcharge: hargaPromo?.pengaturanHarga?.biayaAntarJemput.toString() || defaultAdminSettings.expressSurcharge,
+
+      // Security settings
+      twoFactorRequired: keamanan?.keamananAplikasi?.twoFactorAuth ?? defaultAdminSettings.twoFactorRequired,
+      sessionTimeoutMinutes: keamanan?.pengaturanBackup?.backupRetention.toString() || defaultAdminSettings.sessionTimeoutMinutes,
+    };
+  };
+
   const [settings, setSettings] =
-    useState<AdminSettingValues>(defaultAdminSettings);
+    useState<AdminSettingValues>(getInitialSettings());
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<SettingSectionId>("umum");
   const [outletPanelKey, setOutletPanelKey] = useState(0);
@@ -492,14 +540,52 @@ export function AdminSettingsPage() {
     persistPromoCampaigns(nextCampaigns);
   };
 
-  const saveSettings = () => {
-    persistPromoCampaigns();
-    setSavedAt(
-      new Date().toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    );
+  const saveSettings = async () => {
+    try {
+      // persist promo campaigns locally
+      persistPromoCampaigns();
+
+      // Prepare payloads
+      const umumPayload = {
+        namaAplikasi: settings.businessName,
+        tagline: settings.tagline,
+        email: settings.supportEmail,
+        nomorTelepon: settings.supportPhone,
+        alamatPusat: settings.headquartersAddress,
+        fiturAplikasi: {
+          pickupAndDelivery: settings.pickupDeliveryEnabled,
+          aiSuggestions: settings.aiSuggestionsEnabled,
+          liveTracking: settings.liveTrackingEnabled,
+          pushNotifications: settings.pushNotificationsEnabled,
+          multiLanguage: settings.multiLanguageEnabled,
+        },
+      };
+
+      const outletPayload = {
+        namaOutlet: settings.defaultOutlet,
+        alamatOutlet: settings.outletAddress,
+        email: settings.outletEmail,
+        nomorTelepon: settings.supportPhone,
+        jamMulai: settings.openTime,
+        jamSelesai: settings.closeTime,
+      };
+
+      await Promise.all([
+        updatePengaturanUmum(umumPayload),
+        updatePengaturanOutlet(outletPayload),
+      ]);
+
+      setSavedAt(
+        new Date().toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      );
+      setPromoFeedback({ tone: "success", message: "Pengaturan berhasil disimpan." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Gagal menyimpan pengaturan";
+      setPromoFeedback({ tone: "error", message });
+    }
   };
 
   const resetSettings = () => {
