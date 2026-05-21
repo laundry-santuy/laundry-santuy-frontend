@@ -51,6 +51,124 @@ export type UpdateLayananBody = Partial<CreateLayananBody> & {
   is_active?: boolean;
 };
 
+// ── Dashboard API types ───────────────────────────────────────────────────────
+
+export type DashboardOverview = {
+  totalRevenue: number;
+  totalPesanan: number;
+  pelangganAktif: number;
+  totalOutlet: number;
+};
+
+export type RevenueTrendPoint = {
+  month: string;
+  revenue: number;
+};
+
+export type StatusPesananItem = {
+  status: string;
+  count: number;
+};
+
+export type TopOutletItem = {
+  rank: number;
+  name: string;
+  orders: number;
+  revenue: number;
+};
+
+export type AktivitasTerbaruItem = {
+  id: string;
+  pesan: string;
+  waktu: string;
+  harga: number;
+};
+
+export type OperasionalHariIni = {
+  pickupQueue: number;
+  slaCompliance: number;
+  pendingTickets: number;
+};
+
+export type OperasiAktif = {
+  todayRevenue: number;
+  todayTransactions: number;
+  ordersInProcess: number;
+  lastSync: string;
+};
+
+export type DashboardResponse = {
+  overview: DashboardOverview;
+  operasionalHariIni: OperasionalHariIni;
+  operasiAktif: OperasiAktif;
+  revenueTrend: RevenueTrendPoint[];
+  statusPesanan: StatusPesananItem[];
+  topOutlets: TopOutletItem[];
+  aktivitasTerbaru: AktivitasTerbaruItem[];
+};
+
+// ── Settings API types ────────────────────────────────────────────────────────
+
+export type InformasiAplikasi = {
+  namaAplikasi: string;
+  tagline: string;
+  email: string;
+  nomorTelepon: string;
+  alamatPusat: string;
+};
+
+export type FiturAplikasi = {
+  pickupAndDelivery: boolean;
+  aiSuggestions: boolean;
+  liveTracking: boolean;
+  pushNotifications: boolean;
+  multiLanguage: boolean;
+};
+
+export type PengaturanUmumResponse = {
+  informasiAplikasi: InformasiAplikasi;
+  fiturAplikasi: FiturAplikasi;
+};
+
+export type PengaturanHarga = {
+  hargaMinimum: number;
+  hargaMaksimum: number;
+  biayaAntarJemput: number;
+  freeDeliveryMinimum: number;
+};
+
+export type KodePromo = {
+  id_promo: string;
+  kode: string;
+  diskonPersen: number;
+  diskonNominal: number;
+  minPembelian: number;
+  tanggalAkhir: string;
+};
+
+export type DashboardHargaPromoResponse = {
+  pengaturanHarga: PengaturanHarga;
+  kodePromoAktif: KodePromo[];
+};
+
+export type KeamananAplikasi = {
+  twoFactorAuth: boolean;
+  passwordExpiry: boolean;
+  sessionTimeout: boolean;
+  loginAttempts: boolean;
+  ipWhitelist: boolean;
+};
+
+export type PengaturanBackup = {
+  hariBackup: string;
+  backupRetention: number;
+};
+
+export type PengaturanKeamananResponse = {
+  keamananAplikasi: KeamananAplikasi;
+  pengaturanBackup: PengaturanBackup;
+};
+
 // ── Schema mapping: backend LayananBackend → frontend OutletService ───────────
 
 export function backendToOutletService(backend: LayananBackend): OutletService {
@@ -72,6 +190,10 @@ export function backendToOutletService(backend: LayananBackend): OutletService {
 
 // ── API calls ─────────────────────────────────────────────────────────────────
 
+export function fetchDashboard(): Promise<DashboardResponse> {
+  return apiClient.get<DashboardResponse>('/api/admin/dashboard');
+}
+
 export function fetchPengaturanOutlet(): Promise<PengaturanOutletResponse> {
   return apiClient.get<PengaturanOutletResponse>('/api/admin/pengaturan-outlet');
 }
@@ -91,4 +213,45 @@ export function updateLayanan(
 
 export function deleteLayanan(id: string): Promise<{ message: string }> {
   return apiClient.del(`/api/layanan/${id}`);
+}
+
+// ── Settings API calls ────────────────────────────────────────────────────────
+
+export function fetchPengaturanUmum(): Promise<PengaturanUmumResponse> {
+  return apiClient.get<PengaturanUmumResponse>('/api/admin/pengaturan-umum');
+}
+
+export function fetchDashboardHargaPromo(): Promise<DashboardHargaPromoResponse> {
+  return apiClient.get<DashboardHargaPromoResponse>('/api/admin/dashboard-harga-promo');
+}
+
+export function fetchPengaturanKeamanan(): Promise<PengaturanKeamananResponse> {
+  return apiClient.get<PengaturanKeamananResponse>('/api/admin/pengaturan-keamanan');
+}
+
+export type UpdatePengaturanUmumBody = {
+  namaAplikasi?: string;
+  tagline?: string;
+  email?: string;
+  nomorTelepon?: string;
+  alamatPusat?: string;
+  fiturAplikasi?: Partial<FiturAplikasi>;
+};
+
+export function updatePengaturanUmum(body: UpdatePengaturanUmumBody): Promise<{ message: string }> {
+  return apiClient.put('/api/admin/pengaturan-umum', body);
+}
+
+export type UpdatePengaturanOutletBody = {
+  id_outlet?: string | null;
+  namaOutlet?: string;
+  alamatOutlet?: string;
+  email?: string;
+  nomorTelepon?: string;
+  jamMulai?: string | null;
+  jamSelesai?: string | null;
+};
+
+export function updatePengaturanOutlet(body: UpdatePengaturanOutletBody): Promise<{ message: string }> {
+  return apiClient.put('/api/admin/pengaturan-outlet', body);
 }

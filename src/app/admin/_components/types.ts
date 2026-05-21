@@ -77,6 +77,8 @@ export type AdminSettingValues = {
   headquartersAddress: string;
   defaultOutlet: string;
   outletAddress: string;
+  outletEmail: string;
+  outletPhone: string;
   pickupRadiusKm: string;
   dailyCapacityKg: string;
   pricePerKg: string;

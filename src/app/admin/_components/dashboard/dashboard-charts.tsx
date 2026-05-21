@@ -233,15 +233,24 @@ function DashboardCardHeader({
   );
 }
 
-export function RevenueTrendCard() {
-  const [selectedYear, setSelectedYear] = useState<DashboardYear>("2026");
-  const [activeIndex, setActiveIndex] = useState(
-    revenueTrendByYear[selectedYear].length - 1,
-  );
+type RevenueTrendCardProps = {
+  data?: { month: string; revenue: number }[];
+};
+
+export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
+  const [activeIndex, setActiveIndex] = useState(-1);
   const width = 640;
   const height = 320;
   const padding = 44;
-  const activeTrend = revenueTrendByYear[selectedYear];
+  
+  // Transform backend data to component format
+  const activeTrend = data ? data.map(item => ({
+    month: item.month.split('-')[1] || item.month, // Extract month from "2026-05"
+    value: item.revenue
+  })) : revenueTrendByYear["2026"];
+  
+  // Set active index to last item if not set
+  const activeIdx = activeIndex === -1 ? activeTrend.length - 1 : activeIndex;
   const monthTicks = activeTrend.map((item) => item.month);
   const polylinePoints = buildPolyline(
     activeTrend.map((item) => item.value),
@@ -249,11 +258,11 @@ export function RevenueTrendCard() {
     height,
     padding,
   );
-  const activePoint = activeTrend[activeIndex] ?? activeTrend.at(-1);
+  const activePoint = activeTrend[activeIdx] ?? activeTrend.at(-1);
   const activePosition = activePoint
     ? getPointPosition({
         value: activePoint.value,
-        index: activeIndex,
+        index: activeIdx,
         total: activeTrend.length,
         width,
         height,
@@ -267,11 +276,6 @@ export function RevenueTrendCard() {
         icon={TrendingUp}
         title="Tren Pendapatan"
         description="6 bulan terakhir"
-        year={selectedYear}
-        onYearChange={(year) => {
-          setSelectedYear(year);
-          setActiveIndex(revenueTrendByYear[year].length - 1);
-        }}
       />
 
       <CardContent className="pt-6">
@@ -283,7 +287,7 @@ export function RevenueTrendCard() {
             viewBox={`0 0 ${width} ${height}`}
             className="h-auto w-full touch-pan-y"
             role="img"
-            aria-label={`Tren pendapatan ${selectedYear}`}
+            aria-label="Tren pendapatan"
           >
             {yTicks.map((tick) => {
               const y =
@@ -321,7 +325,7 @@ export function RevenueTrendCard() {
                   Math.max(monthTicks.length - 1, 1);
 
               return (
-                <g key={month}>
+                <g key={`${month}-${index}`}>
                   <line
                     x1={x}
                     x2={x}
@@ -410,7 +414,7 @@ export function RevenueTrendCard() {
             >
               <ChartTooltipContent
                 indicator="line"
-                label={`${activePoint.month} ${selectedYear}`}
+                label={`${activePoint.month}`}
                 value={formatCompactCurrency(activePoint.value)}
               />
             </ChartTooltip>
@@ -434,10 +438,39 @@ export function RevenueTrendCard() {
   );
 }
 
-export function OrderStatusCard() {
-  const [selectedYear, setSelectedYear] = useState<DashboardYear>("2026");
+type OrderStatusCardProps = {
+  data?: { status: string; count: number }[];
+};
+
+export function OrderStatusCard({ data }: OrderStatusCardProps) {
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
-  const activeDistribution = orderStatusByYear[selectedYear];
+
+  // Transform backend data to component format
+  const activeDistribution = data
+    ? (() => {
+        const total = data.reduce((sum, item) => sum + item.count, 0);
+        const statusMap: Record<string, { label: string; color: string }> = {
+          selesai: { label: "Selesai", color: "#16a34a" },
+          proses: { label: "Diproses", color: "#d97706" },
+          menunggu: { label: "Menunggu", color: "#e11d48" },
+          dibatalkan: { label: "Dibatalkan", color: "#64748b" },
+        };
+        
+        return data.map(item => {
+          const normalizedStatus = item.status.toLowerCase();
+          const mapping = statusMap[normalizedStatus] || { label: item.status, color: "#94a3b8" };
+          const percentage = total > 0 ? Math.round((item.count / total) * 100) : 0;
+          
+          return {
+            label: mapping.label,
+            value: percentage,
+            color: mapping.color,
+          };
+        });
+      })()
+    : orderStatusByYear["2026"];
+  
+  const totalOrders = data ? data.reduce((sum, item) => sum + item.count, 0) : totalOrdersByYear["2026"];
   const activeSlices = buildDonutSlices(activeDistribution);
   const activeSlice =
     activeDistribution.find((item) => item.label === activeStatus) ?? null;
@@ -448,11 +481,6 @@ export function OrderStatusCard() {
         icon={Package}
         title="Status Pesanan"
         description="Distribusi saat ini"
-        year={selectedYear}
-        onYearChange={(year) => {
-          setSelectedYear(year);
-          setActiveStatus(null);
-        }}
       />
 
       <CardContent className="pt-6">
@@ -465,7 +493,7 @@ export function OrderStatusCard() {
               viewBox="0 0 240 240"
               className="absolute inset-0 h-full w-full -rotate-90"
               role="img"
-              aria-label={`Distribusi status pesanan ${selectedYear}`}
+              aria-label="Distribusi status pesanan"
             >
               {activeSlices.map((item) => {
                 const dashOffset = -item.offset;
@@ -509,7 +537,7 @@ export function OrderStatusCard() {
             </svg>
             <div className="relative flex h-32 w-32 flex-col items-center justify-center rounded-full border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-center shadow-[0_14px_30px_rgba(25,28,29,0.08)]">
               <span className="text-3xl font-extrabold text-[var(--odong-text)]">
-                {activeSlice ? `${activeSlice.value}%` : totalOrdersByYear[selectedYear]}
+                {activeSlice ? `${activeSlice.value}%` : totalOrders}
               </span>
               <span className="mt-1 text-xs font-bold text-[var(--odong-muted)]">
                 {activeSlice ? activeSlice.label : "total pesanan"}
@@ -556,7 +584,26 @@ export function OrderStatusCard() {
   );
 }
 
-export function TopOutletCard() {
+type TopOutletCardProps = {
+  data?: { rank: number; name: string; orders: number; revenue: number }[];
+};
+
+export function TopOutletCard({ data }: TopOutletCardProps) {
+  // Format revenue number to display format
+  const formatRevenueDisplay = (value: number): string => {
+    if (value >= 1000000) {
+      const juta = value / 1000000;
+      return `Rp ${juta.toLocaleString("id-ID", { maximumFractionDigits: 1 })} Jt`;
+    }
+    if (value >= 1000) {
+      const ribu = value / 1000;
+      return `Rp ${ribu.toLocaleString("id-ID", { maximumFractionDigits: 0 })}rb`;
+    }
+    return `Rp ${value.toLocaleString("id-ID")}`;
+  };
+
+  const activeOutlets = data || topOutlets;
+
   return (
     <Card>
       <DashboardCardHeader
@@ -567,7 +614,7 @@ export function TopOutletCard() {
 
       <CardContent className="pt-6">
         <ol className="divide-y divide-[var(--odong-border)]">
-          {topOutlets.map((outlet) => (
+          {activeOutlets.map((outlet) => (
             <li
               key={outlet.rank}
               className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
@@ -588,7 +635,7 @@ export function TopOutletCard() {
 
               <div className="text-right">
                 <p className="text-lg font-extrabold text-[var(--odong-text)]">
-                  {outlet.revenue}
+                  {typeof outlet.revenue === 'string' ? outlet.revenue : formatRevenueDisplay(outlet.revenue)}
                 </p>
                 <p className="text-sm text-[var(--odong-muted-soft)]">
                   Pendapatan
@@ -602,7 +649,23 @@ export function TopOutletCard() {
   );
 }
 
-export function LatestActivityCard() {
+type LatestActivityCardProps = {
+  data?: { id: string; pesan: string; waktu: string; harga: number }[];
+};
+
+export function LatestActivityCard({ data }: LatestActivityCardProps) {
+  // Transform backend data to component format
+  const transformedActivities = data ? data.map((activity) => ({
+    id: activity.id,
+    title: activity.pesan,
+    time: activity.waktu,
+    tone: activity.pesan.toLowerCase().includes('batalkan') || activity.pesan.toLowerCase().includes('baru')
+      ? 'danger' as const
+      : activity.pesan.toLowerCase().includes('kapasitas') || activity.pesan.toLowerCase().includes('warning')
+        ? 'warning' as const
+        : 'success' as const,
+  })) : adminActivities;
+
   return (
     <Card>
       <DashboardCardHeader
@@ -613,7 +676,7 @@ export function LatestActivityCard() {
 
       <CardContent className="pt-6">
         <ul className="divide-y divide-[var(--odong-border)]">
-          {adminActivities.map((activity) => {
+          {transformedActivities.map((activity) => {
             const toneClass =
               activity.tone === "danger"
                 ? "bg-rose-50 text-rose-600"

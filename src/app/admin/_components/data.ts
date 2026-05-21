@@ -313,6 +313,8 @@ export const defaultAdminSettings: AdminSettingValues = {
   headquartersAddress: "Jl. Jenderal Sudirman Kav. 52, Jakarta Selatan",
   defaultOutlet: "Outlet Sudirman",
   outletAddress: "Jl. Jenderal Sudirman Kav. 52, Jakarta Selatan",
+  outletEmail: "outlet@laundrysantuy.id",
+  outletPhone: "021-5550000",
   pickupRadiusKm: "4.5",
   dailyCapacityKg: "320",
   pricePerKg: "Rp 7.500",
