@@ -1,5 +1,6 @@
 "use client";
 
+import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LocateFixed, Search } from "lucide-react";
 import type * as Leaflet from "leaflet";

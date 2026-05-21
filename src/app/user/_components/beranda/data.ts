@@ -23,6 +23,7 @@ export const activeOrder: ActiveOrder = {
     vehicle: "Honda Beat B 1234 XY",
     distance: "Kurir ~1.2 km dari laundry",
   },
+  courierInitials: "AH",
 };
 
 export const reminders: Reminder[] = [
