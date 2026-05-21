@@ -27,7 +27,6 @@ export type PengaturanOutletResponse = {
     jamSelesai: string | null;
   };
   layananOutlet: LayananBackend[];
-  semuaOutlet: { id: string; nama: string }[];
 };
 
 export type CreateLayananBody = {
@@ -40,6 +39,47 @@ export type CreateLayananBody = {
 
 export type UpdateLayananBody = Partial<CreateLayananBody> & {
   is_active?: boolean;
+};
+
+// ── Dashboard API types ───────────────────────────────────────────────────────
+
+export type DashboardOverview = {
+  totalRevenue: number;
+  totalPesanan: number;
+  pelangganAktif: number;
+  totalOutlet: number;
+};
+
+export type RevenueTrendPoint = {
+  month: string;
+  revenue: number;
+};
+
+export type StatusPesananItem = {
+  status: string;
+  count: number;
+};
+
+export type TopOutletItem = {
+  rank: number;
+  name: string;
+  orders: number;
+  revenue: number;
+};
+
+export type AktivitasTerbaruItem = {
+  id: string;
+  pesan: string;
+  waktu: string;
+  harga: number;
+};
+
+export type DashboardResponse = {
+  overview: DashboardOverview;
+  revenueTrend: RevenueTrendPoint[];
+  statusPesanan: StatusPesananItem[];
+  topOutlets: TopOutletItem[];
+  aktivitasTerbaru: AktivitasTerbaruItem[];
 };
 
 // ── Service metadata stored in localStorage for fields not in the DB ──────────
@@ -118,23 +158,27 @@ export function syncServicesToLocalStorage(
 
 // ── API calls ─────────────────────────────────────────────────────────────────
 
+export function fetchDashboard(): Promise<DashboardResponse> {
+  return apiClient.get<DashboardResponse>('/api/admin/dashboard');
+}
+
 export function fetchPengaturanOutlet(): Promise<PengaturanOutletResponse> {
-  return apiClient.get<PengaturanOutletResponse>('/admin/pengaturan-outlet');
+  return apiClient.get<PengaturanOutletResponse>('/api/admin/pengaturan-outlet');
 }
 
 export function createLayanan(
   body: CreateLayananBody,
 ): Promise<{ message: string; data: { id_layanan: string } & Record<string, unknown> }> {
-  return apiClient.post('/layanan', body);
+  return apiClient.post('/api/layanan', body);
 }
 
 export function updateLayanan(
   id: string,
   body: UpdateLayananBody,
 ): Promise<{ message: string }> {
-  return apiClient.put(`/layanan/${id}`, body);
+  return apiClient.put(`/api/layanan/${id}`, body);
 }
 
 export function deleteLayanan(id: string): Promise<{ message: string }> {
-  return apiClient.del(`/layanan/${id}`);
+  return apiClient.del(`/api/layanan/${id}`);
 }

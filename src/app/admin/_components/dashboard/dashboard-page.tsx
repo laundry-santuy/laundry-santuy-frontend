@@ -22,6 +22,7 @@ import {
   DashboardErrorState,
   DashboardLoadingState,
 } from "./dashboard-states";
+import type { DashboardResponse } from "@/lib/admin-api";
 
 export type DashboardStatus = "loading" | "error" | "empty" | "ready";
 
@@ -31,6 +32,20 @@ const statToneClass = {
   amber: "bg-amber-50 text-amber-600",
   rose: "bg-rose-50 text-rose-600",
 } as const;
+
+// Helper function to format currency
+function formatCurrency(value: number): string {
+  if (value === 0) return "Rp 0";
+  if (value >= 1000000) {
+    const juta = value / 1000000;
+    return `Rp ${juta.toLocaleString("id-ID", { maximumFractionDigits: 1 })} Jt`;
+  }
+  if (value >= 1000) {
+    const ribu = value / 1000;
+    return `Rp ${ribu.toLocaleString("id-ID", { maximumFractionDigits: 0 })}rb`;
+  }
+  return `Rp ${value.toLocaleString("id-ID")}`;
+}
 
 const heroHighlights = [
   {
@@ -78,10 +93,12 @@ const liveOverviewRows = [
 
 type AdminDashboardPageProps = {
   status?: DashboardStatus;
+  dashboardData?: DashboardResponse | null;
 };
 
 export function AdminDashboardPage({
   status = "ready",
+  dashboardData,
 }: AdminDashboardPageProps) {
   if (status === "loading") {
     return <DashboardLoadingState />;
@@ -206,35 +223,121 @@ export function AdminDashboardPage({
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {adminStats.map((stat) => {
-          const Icon = stat.icon;
-
-          return (
-            <article
-              key={stat.label}
-              className="min-h-[132px] rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-5 shadow-[0_18px_48px_rgba(25,28,29,0.06)] transition hover:-translate-y-0.5 hover:bg-primary-50/35 md:p-6"
-            >
+        {dashboardData ? (
+          <>
+            {/* Pendapatan */}
+            <article className="min-h-[132px] rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-5 shadow-[0_18px_48px_rgba(25,28,29,0.06)] transition hover:-translate-y-0.5 hover:bg-primary-50/35 md:p-6">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[var(--odong-muted)]">
-                    {stat.label}
+                    Pendapatan
                   </p>
                   <p className="mt-2 break-words text-3xl font-extrabold tracking-normal text-[var(--odong-text)]">
-                    {stat.value}
+                    {formatCurrency(dashboardData.overview.totalRevenue)}
                   </p>
                 </div>
-                <span
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${statToneClass[stat.tone]}`}
-                >
-                  <Icon className="h-5 w-5" aria-hidden="true" />
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-50 text-primary-600">
+                  <PackageCheck className="h-5 w-5" aria-hidden="true" />
                 </span>
               </div>
               <p className="mt-4 text-sm font-semibold text-[var(--odong-muted)]">
-                {stat.caption}
+                Total pesanan terselesaikan
               </p>
             </article>
-          );
-        })}
+
+            {/* Pesanan */}
+            <article className="min-h-[132px] rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-5 shadow-[0_18px_48px_rgba(25,28,29,0.06)] transition hover:-translate-y-0.5 hover:bg-primary-50/35 md:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--odong-muted)]">
+                    Pesanan
+                  </p>
+                  <p className="mt-2 break-words text-3xl font-extrabold tracking-normal text-[var(--odong-text)]">
+                    {dashboardData.overview.totalPesanan}
+                  </p>
+                </div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                  <PackageCheck className="h-5 w-5" aria-hidden="true" />
+                </span>
+              </div>
+              <p className="mt-4 text-sm font-semibold text-[var(--odong-muted)]">
+                Total semua pesanan
+              </p>
+            </article>
+
+            {/* Pelanggan Aktif */}
+            <article className="min-h-[132px] rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-5 shadow-[0_18px_48px_rgba(25,28,29,0.06)] transition hover:-translate-y-0.5 hover:bg-primary-50/35 md:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--odong-muted)]">
+                    Pelanggan Aktif
+                  </p>
+                  <p className="mt-2 break-words text-3xl font-extrabold tracking-normal text-[var(--odong-text)]">
+                    {dashboardData.overview.pelangganAktif}
+                  </p>
+                </div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                  <UsersRound className="h-5 w-5" aria-hidden="true" />
+                </span>
+              </div>
+              <p className="mt-4 text-sm font-semibold text-[var(--odong-muted)]">
+                Pelanggan dengan pesanan aktif
+              </p>
+            </article>
+
+            {/* Outlet */}
+            <article className="min-h-[132px] rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-5 shadow-[0_18px_48px_rgba(25,28,29,0.06)] transition hover:-translate-y-0.5 hover:bg-primary-50/35 md:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--odong-muted)]">
+                    Outlet
+                  </p>
+                  <p className="mt-2 break-words text-3xl font-extrabold tracking-normal text-[var(--odong-text)]">
+                    {dashboardData.overview.totalOutlet}
+                  </p>
+                </div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+                  <Sparkles className="h-5 w-5" aria-hidden="true" />
+                </span>
+              </div>
+              <p className="mt-4 text-sm font-semibold text-[var(--odong-muted)]">
+                Outlet aktif
+              </p>
+            </article>
+          </>
+        ) : (
+          <>
+            {adminStats.map((stat) => {
+              const Icon = stat.icon;
+
+              return (
+                <article
+                  key={stat.label}
+                  className="min-h-[132px] rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-5 shadow-[0_18px_48px_rgba(25,28,29,0.06)] transition hover:-translate-y-0.5 hover:bg-primary-50/35 md:p-6"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[var(--odong-muted)]">
+                        {stat.label}
+                      </p>
+                      <p className="mt-2 break-words text-3xl font-extrabold tracking-normal text-[var(--odong-text)]">
+                        {stat.value}
+                      </p>
+                    </div>
+                    <span
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${statToneClass[stat.tone]}`}
+                    >
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                  </div>
+                  <p className="mt-4 text-sm font-semibold text-[var(--odong-muted)]">
+                    {stat.caption}
+                  </p>
+                </article>
+              );
+            })}
+          </>
+        )}
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
