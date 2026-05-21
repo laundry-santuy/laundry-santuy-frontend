@@ -1361,8 +1361,8 @@ export function AdminSettingsPage({
 
       <AdminDialog
         open={Boolean(editOutletId && editOutletDraft)}
-        title="Edit outlet"
-        description="Perbarui data outlet ini tanpa mengubah outlet lain."
+        title="Edit Data Outlet"
+        description="Perbarui informasi outlet ini. Perubahan tidak memengaruhi outlet lain."
         onClose={() => {
           setEditOutletId(null);
           setEditOutletDraft(null);
@@ -1461,7 +1461,7 @@ export function AdminSettingsPage({
                 className={adminPrimaryButtonClass}
               >
                 <Save className="h-4 w-4" aria-hidden="true" />
-                Simpan outlet
+                Simpan Perubahan
               </button>
             </div>
           </div>

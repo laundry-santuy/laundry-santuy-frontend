@@ -27,10 +27,10 @@ const markerSvg = encodeURIComponent(`
 function createOutletMarkerIcon(leaflet: typeof import("leaflet")) {
   return leaflet.divIcon({
     className: "",
-    html: `<div style="width:42px;height:54px;transform:translate(-50%, -100%);filter:drop-shadow(0 8px 18px rgba(0,88,202,0.28));"><img src="data:image/svg+xml;charset=UTF-8,${markerSvg}" alt="" style="display:block;width:42px;height:54px;" /></div>`,
+    html: `<div style="width:42px;height:54px;filter:drop-shadow(0 8px 18px rgba(0,88,202,0.28));"><img src="data:image/svg+xml;charset=UTF-8,${markerSvg}" alt="" style="display:block;width:42px;height:54px;" /></div>`,
     iconSize: [42, 54],
-    iconAnchor: [21, 52],
-    popupAnchor: [0, -48],
+    iconAnchor: [21, 54],
+    popupAnchor: [0, -54],
   });
 }
 
@@ -136,6 +136,7 @@ export function OutletMapPicker({
     }
 
     let cancelled = false;
+    let observer: ResizeObserver | null = null;
 
     const initializeMap = async () => {
       const leaflet = await import("leaflet");
@@ -163,6 +164,12 @@ export function OutletMapPicker({
       mapRef.current = map;
       markerRef.current = marker;
       setLoadingMap(false);
+
+      setTimeout(() => { map.invalidateSize(); }, 50);
+      setTimeout(() => { map.invalidateSize(); }, 300);
+
+      observer = new ResizeObserver(() => { map.invalidateSize(); });
+      if (mapContainerRef.current) observer.observe(mapContainerRef.current);
 
       const syncPosition = async (position: { lat: number; lng: number }) => {
         callbackRef.current.onLatitudeChange(String(position.lat));
@@ -202,6 +209,7 @@ export function OutletMapPicker({
 
     return () => {
       cancelled = true;
+      observer?.disconnect();
       mapRef.current?.off();
       mapRef.current?.remove();
       mapRef.current = null;
@@ -301,13 +309,14 @@ export function OutletMapPicker({
         </button>
       </div>
 
-      <div className="relative overflow-hidden rounded-3xl border border-(--odong-border) bg-(--odong-surface-strong)">
+      <div className="relative isolate overflow-hidden rounded-3xl border border-(--odong-border) bg-(--odong-surface-strong)">
         <div
           ref={mapContainerRef}
           className="h-88 w-full"
+          style={{ position: "relative", zIndex: 0 }}
           aria-label="Peta outlet OpenStreetMap"
         />
-        <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-white/85 px-3 py-1 text-[10px] font-medium leading-4 text-(--odong-muted) shadow-[0_4px_12px_rgba(15,23,42,0.08)] backdrop-blur-sm">
+        <div className="pointer-events-none absolute bottom-2 left-2 z-[1001] rounded-full bg-white/85 px-3 py-1 text-[10px] font-medium leading-4 text-(--odong-muted) shadow-[0_4px_12px_rgba(15,23,42,0.08)] backdrop-blur-sm">
           <span dangerouslySetInnerHTML={{ __html: osmTileAttribution }} />
         </div>
       </div>
