@@ -52,19 +52,19 @@ const statConfig = [
 
 const statPillStyles = {
   incoming: {
-    pill:  "border-primary-100 bg-white/85",
-    icon:  "bg-primary-50 text-primary-600",
-    value: "text-primary-700",
+    pill:  "border-primary-100 bg-white/85 dark:border-primary-800/50 dark:bg-primary-950/70",
+    icon:  "bg-primary-50 text-primary-600 dark:bg-primary-900/60 dark:text-primary-300",
+    value: "text-primary-700 dark:text-primary-300",
   },
   accepted: {
-    pill:  "border-emerald-100 bg-white/85",
-    icon:  "bg-emerald-50 text-emerald-600",
-    value: "text-emerald-700",
+    pill:  "border-emerald-100 bg-white/85 dark:border-emerald-800/50 dark:bg-emerald-950/70",
+    icon:  "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/60 dark:text-emerald-300",
+    value: "text-emerald-700 dark:text-emerald-300",
   },
   rejected: {
-    pill:  "border-red-100 bg-white/85",
-    icon:  "bg-red-50 text-red-600",
-    value: "text-red-700",
+    pill:  "border-red-100 bg-white/85 dark:border-red-800/50 dark:bg-red-950/70",
+    icon:  "bg-red-50 text-red-600 dark:bg-red-900/60 dark:text-red-300",
+    value: "text-red-700 dark:text-red-300",
   },
 } as const;
 
@@ -167,11 +167,11 @@ export function IncomingOrdersPage() {
 
       <div className="relative z-10 space-y-5 pb-24 sm:pb-28">
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-stretch">
-          <div className="overflow-hidden rounded-[32px] border border-primary-100 bg-primary-50/80 p-5 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-6 lg:p-7">
+          <div className="overflow-hidden rounded-[32px] border border-primary-100 bg-primary-50/80 dark:border-primary-800/50 dark:bg-primary-900/40 p-5 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-6 lg:p-7">
             <div className="relative">
               <div className="absolute right-[-80px] top-[-90px] h-64 w-64 rounded-full bg-primary-200/35 blur-3xl" />
               <div className="relative max-w-2xl">
-                <p className="inline-flex w-fit items-center gap-2 rounded-full border border-primary-100 bg-white/85 px-3 py-1.5 text-xs font-bold text-primary-700 shadow-[0_8px_18px_rgba(0,88,202,0.07)] backdrop-blur-xl">
+                <p className="inline-flex w-fit items-center gap-2 rounded-full border border-primary-100 bg-white/85 dark:border-primary-800/50 dark:bg-primary-950/70 dark:text-primary-300 px-3 py-1.5 text-xs font-bold text-primary-700 shadow-[0_8px_18px_rgba(0,88,202,0.07)] backdrop-blur-xl">
                   <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                   Workspace driver
                 </p>

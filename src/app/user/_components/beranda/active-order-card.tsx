@@ -105,49 +105,55 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
         ))}
       </ol>
 
-      <div className="odong-surface-muted mt-5 grid gap-3 rounded-2xl p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white">
-          AH
+      {order.courier ? (
+        <div className="odong-surface-muted mt-5 grid gap-3 rounded-2xl p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white">
+              {order.courierInitials}
+            </div>
+            <div className="min-w-0">
+              <p className="odong-text text-sm font-bold leading-5 text-neutral-900">
+                {order.courier.name} - Kurir
+              </p>
+              <p className="odong-muted mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-4 text-neutral-500">
+                <span className="inline-flex items-center gap-1">
+                  <Star
+                    className="h-3.5 w-3.5 fill-[#ffc107] text-[#ffc107]"
+                    aria-hidden="true"
+                  />
+                  {order.courier.rating}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>{order.courier.vehicle}</span>
+                <span className="inline-flex items-center gap-1">
+                  <Truck className="h-3.5 w-3.5 text-primary-600" aria-hidden="true" />
+                  {order.courier.distance}
+                </span>
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="odong-text text-sm font-bold leading-5 text-neutral-900">
-              {order.courier.name} - Kurir
-            </p>
-            <p className="odong-muted mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-4 text-neutral-500">
-              <span className="inline-flex items-center gap-1">
-                <Star
-                  className="h-3.5 w-3.5 fill-[#ffc107] text-[#ffc107]"
-                  aria-hidden="true"
-                />
-                {order.courier.rating}
-              </span>
-              <span aria-hidden="true">·</span>
-              <span>{order.courier.vehicle}</span>
-              <span className="inline-flex items-center gap-1">
-                <Truck className="h-3.5 w-3.5 text-primary-600" aria-hidden="true" />
-                {order.courier.distance}
-              </span>
-            </p>
+          <div className="flex gap-2 sm:justify-end">
+            <button
+              type="button"
+              aria-label="Telepon kurir"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white shadow-[0_8px_18px_rgba(38,113,238,0.25)] transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+            >
+              <Phone className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="Kirim pesan ke kurir"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white shadow-[0_8px_18px_rgba(38,113,238,0.25)] transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+            >
+              <MessageCircle className="h-5 w-5" aria-hidden="true" />
+            </button>
           </div>
         </div>
-        <div className="flex gap-2 sm:justify-end">
-          <button
-            type="button"
-            aria-label="Telepon kurir"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white shadow-[0_8px_18px_rgba(38,113,238,0.25)] transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
-          >
-            <Phone className="h-5 w-5" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            aria-label="Kirim pesan ke kurir"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white shadow-[0_8px_18px_rgba(38,113,238,0.25)] transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
-          >
-            <MessageCircle className="h-5 w-5" aria-hidden="true" />
-          </button>
+      ) : (
+        <div className="odong-surface-muted mt-5 rounded-2xl p-3">
+          <p className="text-xs text-[var(--odong-muted)]">Kurir belum ditugaskan</p>
         </div>
-      </div>
+      )}
     </article>
   );
 }

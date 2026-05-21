@@ -51,6 +51,14 @@ function mapProgressToSteps(progress: ProgressItem[]): ActiveOrderStep[] {
   });
 }
 
+function buildInitials(name: string | undefined): string {
+  if (!name) return "KR";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "KR";
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+}
+
 function mapActiveOrder(raw: NonNullable<BerandaResponse["pesananAktif"]>): ActiveOrder {
   const progress: ProgressItem[] = raw.progress ?? [];
   return {
@@ -59,12 +67,15 @@ function mapActiveOrder(raw: NonNullable<BerandaResponse["pesananAktif"]>): Acti
     weight: `${raw.berat} kg`,
     eta: raw.eta,
     steps: mapProgressToSteps(progress),
-    courier: {
-      name: raw.kurir.nama,
-      rating: raw.kurir.rating,
-      vehicle: `${raw.kurir.kendaraan} ${raw.kurir.noPolisi}`,
-      distance: "Kurir aktif",
-    },
+    courier: raw.kurir
+      ? {
+          name: raw.kurir.nama,
+          rating: raw.kurir.rating,
+          vehicle: `${raw.kurir.kendaraan} ${raw.kurir.noPolisi}`.trim(),
+          distance: "Kurir aktif",
+        }
+      : null,
+    courierInitials: buildInitials(raw.kurir?.nama),
   };
 }
 
@@ -267,7 +278,7 @@ export function BerandaDashboard() {
                 <div className="odong-surface-strong rounded-2xl px-4 py-3">
                   <p className="odong-muted-soft text-xs font-semibold text-neutral-400">Kurir</p>
                   <p className="odong-text mt-1 text-sm font-bold text-neutral-900">
-                    {activeOrder.courier.name} · {activeOrder.courier.rating}
+                    {activeOrder.courier ? `${activeOrder.courier.name} · ${activeOrder.courier.rating}` : "Belum ada kurir"}
                   </p>
                 </div>
                 <div className="odong-surface-strong rounded-2xl px-4 py-3">

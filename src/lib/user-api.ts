@@ -36,7 +36,7 @@ export type BerandaResponse = {
       rating: number;
       kendaraan: string;
       noPolisi: string;
-    };
+    } | null;
   } | null;
   pesananTerbaru: {
     id_pesanan: string;
@@ -261,4 +261,17 @@ export async function createPesanan(body: CreatePesananBody): Promise<CreatePesa
 
 export async function updateProfilUser(body: UpdateProfilBody): Promise<{ message: string; data: unknown }> {
   return apiClient.put('/api/user/profil', body);
+}
+
+export type EtaAIResponse = {
+  id_pesanan: string;
+  estimasiMenit: number;
+  label: string;
+  status: string;
+  source: 'ai';
+  faktor: { peak: number; speed: number };
+};
+
+export async function fetchEtaAI(id_pesanan: string): Promise<EtaAIResponse> {
+  return apiClient.get<EtaAIResponse>(`/api/user/eta/${id_pesanan}`);
 }

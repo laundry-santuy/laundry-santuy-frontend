@@ -21,7 +21,8 @@ export type ActiveOrder = {
   weight: string;
   eta: string;
   steps: ActiveOrderStep[];
-  courier: CourierInfo;
+  courier: CourierInfo | null;
+  courierInitials: string;
 };
 
 export type Reminder = {

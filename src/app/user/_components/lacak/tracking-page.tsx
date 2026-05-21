@@ -14,6 +14,7 @@ import {
   Wallet,
 } from "lucide-react";
 import {
+  fetchEtaAI,
   fetchLacak,
   formatRupiah,
   formatWaktu,
@@ -116,11 +117,14 @@ function calcProgress(steps: LacakResponse["statusPerjalanan"]): number {
   return Math.round((steps.filter((s) => s.completed).length / steps.length) * 100);
 }
 
-function mapToTrackingOrder(data: LacakResponse): TrackingOrder {
+function mapToTrackingOrder(data: LacakResponse, aiEtaLabel?: string): TrackingOrder {
   const detail = data.detailPesanan ?? data.pesananAktif;
   const kurir  = data.infoKurir;
   const alamat = data.alamatPenjemputan;
   const peta   = data.petaTracking;
+
+  const etaDisplay = aiEtaLabel
+    ?? (peta ? `${peta.estimasiTibaMenit} menit` : "-");
 
   return {
     id: detail?.kodePesanan ?? "-",
@@ -128,13 +132,13 @@ function mapToTrackingOrder(data: LacakResponse): TrackingOrder {
     statusLabel: detail?.status ?? "menunggu",
     statusDescription: "Status pesanan kamu diperbarui secara real-time.",
     tone: "active",
-    eta: peta ? `${peta.estimasiTibaMenit} menit` : "-",
+    eta: etaDisplay,
     progress: calcProgress(data.statusPerjalanan),
     updatedAt: "Diperbarui baru saja",
     weight: `${detail?.berat ?? 0} kg`,
     total: formatRupiah(detail?.total ?? 0),
     pickupWindow: detail ? formatWaktu(detail.waktu) : "-",
-    outlet: (detail && "namaOutlet" in detail ? detail.namaOutlet : null) ?? "-",
+    outlet: data.detailPesanan?.namaOutlet ?? "-",
     payment: "-",
     pickup: {
       label: alamat?.label ?? "Rumah",
@@ -161,14 +165,22 @@ function mapToTrackingOrder(data: LacakResponse): TrackingOrder {
 export function TrackingPage({ status: propStatus = "ready" }: TrackingPageProps) {
   const [pageStatus, setPageStatus] = useState<TrackingPageStatus>("loading");
   const [apiData, setApiData] = useState<LacakResponse | null>(null);
+  const [aiEtaLabel, setAiEtaLabel] = useState<string | undefined>(undefined);
   const [fetchKey, setFetchKey] = useState(0);
 
   useEffect(() => {
     setPageStatus("loading");
+    setAiEtaLabel(undefined);
     fetchLacak()
       .then((data) => {
         setApiData(data);
         setPageStatus(data.detailPesanan || data.pesananAktif ? "ready" : "empty");
+        const orderId = data.detailPesanan?.id_pesanan ?? data.pesananAktif?.id_pesanan;
+        if (orderId) {
+          fetchEtaAI(orderId)
+            .then((eta) => setAiEtaLabel(eta.label))
+            .catch(() => {});
+        }
       })
       .catch(() => setPageStatus("error"));
   }, [fetchKey]);
@@ -176,8 +188,8 @@ export function TrackingPage({ status: propStatus = "ready" }: TrackingPageProps
   const handleRefresh = () => setFetchKey((k) => k + 1);
 
   const trackingOrder = useMemo(
-    () => (apiData ? mapToTrackingOrder(apiData) : null),
-    [apiData],
+    () => (apiData ? mapToTrackingOrder(apiData, aiEtaLabel) : null),
+    [apiData, aiEtaLabel],
   );
 
   const effectiveStatus = propStatus !== "ready" ? propStatus : pageStatus;
