@@ -112,6 +112,71 @@ export function AdminDashboardPage({
     return <DashboardEmptyState />;
   }
 
+  // Build dynamic hero highlights from dashboardData
+  const dynamicHeroHighlights = dashboardData
+    ? [
+        {
+          label: "Pickup antre",
+          value: dashboardData.operasionalHariIni.pickupQueue.toString(),
+          caption: "Menunggu diambil",
+          icon: Truck,
+        },
+        {
+          label: "SLA tepat waktu",
+          value: `${dashboardData.operasionalHariIni.slaCompliance}%`,
+          caption: "Kinerja hari ini",
+          icon: ShieldCheck,
+        },
+        {
+          label: "Butuh tindak lanjut",
+          value: dashboardData.operasionalHariIni.pendingTickets.toString(),
+          caption: "Tiket aktif",
+          icon: CircleAlert,
+        },
+      ]
+    : heroHighlights;
+
+  // Build dynamic live overview rows from dashboardData
+  const formatLastSync = (isoString: string) => {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+
+    if (diffMin < 1) return "Baru saja";
+    if (diffMin === 1) return "1 mnt lalu";
+    if (diffMin < 60) return `${diffMin} mnt lalu`;
+
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour === 1) return "1 jam lalu";
+    return `${diffHour} jam lalu`;
+  };
+
+  const dynamicLiveOverviewRows = dashboardData
+    ? [
+        {
+          label: "Revenue hari ini",
+          value: formatCurrency(dashboardData.operasiAktif.todayRevenue),
+          caption: `${dashboardData.operasiAktif.todayTransactions} transaksi`,
+        },
+        {
+          label: "Pesanan diproses",
+          value: dashboardData.operasiAktif.ordersInProcess.toString(),
+          caption: "Sedang dikerjakan",
+        },
+        {
+          label: "Outlet tersibuk",
+          value: dashboardData.topOutlets[0]?.name || "N/A",
+          caption: `${dashboardData.topOutlets[0]?.orders || 0} pesanan`,
+        },
+        {
+          label: "Sinkron data",
+          value: formatLastSync(dashboardData.operasiAktif.lastSync),
+          caption: "API admin aktif",
+        },
+      ]
+    : liveOverviewRows;
+
   return (
     <div className="space-y-5">
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.85fr)]">
@@ -149,7 +214,7 @@ export function AdminDashboardPage({
             </div>
 
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
-              {heroHighlights.map((item) => {
+              {dynamicHeroHighlights.map((item) => {
                 const Icon = item.icon;
 
                 return (
@@ -195,7 +260,7 @@ export function AdminDashboardPage({
           </div>
 
           <div className="mt-5 divide-y divide-[var(--odong-border)] overflow-hidden rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)]">
-            {liveOverviewRows.map((row) => (
+            {dynamicLiveOverviewRows.map((row) => (
               <div
                 key={row.label}
                 className="flex items-center justify-between gap-4 px-4 py-4"
@@ -341,8 +406,8 @@ export function AdminDashboardPage({
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
-        <RevenueTrendCard />
-        <OrderStatusCard />
+        <RevenueTrendCard data={dashboardData?.revenueTrend} />
+        <OrderStatusCard data={dashboardData?.statusPesanan} />
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)]">

@@ -74,8 +74,23 @@ export type AktivitasTerbaruItem = {
   harga: number;
 };
 
+export type OperasionalHariIni = {
+  pickupQueue: number;
+  slaCompliance: number;
+  pendingTickets: number;
+};
+
+export type OperasiAktif = {
+  todayRevenue: number;
+  todayTransactions: number;
+  ordersInProcess: number;
+  lastSync: string;
+};
+
 export type DashboardResponse = {
   overview: DashboardOverview;
+  operasionalHariIni: OperasionalHariIni;
+  operasiAktif: OperasiAktif;
   revenueTrend: RevenueTrendPoint[];
   statusPesanan: StatusPesananItem[];
   topOutlets: TopOutletItem[];
