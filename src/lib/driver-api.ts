@@ -41,6 +41,7 @@ const stageKeyToFE: Record<string, DriverActiveProcessStage> = {
   menuju_lokasi: 'menuju-lokasi',
   dijemput:      'dijemput',
   di_laundry:    'di-laundry',
+  siap_diantar:  'siap-diantar',
   diantar:       'diantar',
 };
 
@@ -133,6 +134,13 @@ export async function updatePesananStatus(
   action: 'terima' | 'tolak' | 'advance',
 ): Promise<{ success: boolean; message: string }> {
   return apiClient.patch(`/api/driver/pesanan/${id}/status`, { action });
+}
+
+export async function uploadFotoBukti(
+  id_pesanan: string,
+  foto_url: string,
+): Promise<{ success: boolean; message: string }> {
+  return apiClient.patch(`/api/driver/pesanan/${id_pesanan}/bukti`, { foto_url });
 }
 
 // ── Profil ────────────────────────────────────────────────────────────────────

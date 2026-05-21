@@ -154,6 +154,7 @@ export type CreatePesananBody = {
   waktu_penjemputan?: string;
   catatan?: string;
   alamat_penjemputan?: string;
+  metode_pembayaran?: string;
 };
 
 export type CreatePesananResponse = {

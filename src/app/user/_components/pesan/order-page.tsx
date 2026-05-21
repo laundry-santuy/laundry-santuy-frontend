@@ -195,7 +195,7 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
     return <OrderEmptyState />;
   }
 
-  const canSubmit = Boolean(selectedService && selectedSlot && selectedAddress);
+  const canSubmit = Boolean(selectedService && selectedSlot && selectedAddress?.address?.trim());
 
   const handleSelectService = (serviceId: string) => {
     const nextService = serviceOptions.find(
@@ -258,6 +258,7 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
         waktu_penjemputan: pickupTime,
         catatan: note.trim() || undefined,
         alamat_penjemputan: selectedAddress?.address,
+        metode_pembayaran: selectedPaymentId || undefined,
       });
       setSuccessOrder({
         kodePesanan: result.pesanan.kodePesanan,

@@ -39,6 +39,7 @@ export type DriverActiveProcessStage =
   | "menuju-lokasi"
   | "dijemput"
   | "di-laundry"
+  | "siap-diantar"
   | "diantar";
 
 export type DriverActiveOrderFilter =
@@ -46,6 +47,7 @@ export type DriverActiveOrderFilter =
   | "Menuju Lokasi"
   | "Dijemput"
   | "Di Laundry"
+  | "Siap Diantar"
   | "Diantar";
 
 export type DriverActiveOrder = {

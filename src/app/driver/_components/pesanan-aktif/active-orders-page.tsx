@@ -51,6 +51,12 @@ const stageTone = {
     line: "from-tertiary-500 to-tertiary-300",
     bar:  "bg-tertiary-500",
   },
+  "siap-diantar": {
+    chip: "bg-violet-50 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300",
+    icon: "bg-violet-50 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300",
+    line: "from-violet-500 to-violet-300",
+    bar:  "bg-violet-500",
+  },
   diantar: {
     chip: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",
     icon: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",

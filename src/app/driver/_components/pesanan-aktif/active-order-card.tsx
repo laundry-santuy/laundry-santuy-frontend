@@ -1,5 +1,9 @@
+"use client";
+
 import { cn } from "@/lib/utils";
+import { uploadFotoBukti } from "@/lib/driver-api";
 import {
+  Camera,
   Check,
   ChevronRight,
   Clock3,
@@ -8,6 +12,7 @@ import {
   UserRound,
   Wallet,
 } from "lucide-react";
+import { useRef, useState } from "react";
 import {
   activeProcessStages,
   activeStageLabels,
@@ -24,9 +29,10 @@ type ActiveOrderCardProps = {
 
 const stageTone = {
   "menuju-lokasi": "bg-primary-50 text-primary-700",
-  dijemput: "bg-cyan-50 text-cyan-700",
-  "di-laundry": "bg-tertiary-50 text-tertiary-700",
-  diantar: "bg-emerald-50 text-emerald-700",
+  dijemput:        "bg-cyan-50 text-cyan-700",
+  "di-laundry":    "bg-tertiary-50 text-tertiary-700",
+  "siap-diantar":  "bg-violet-50 text-violet-700",
+  diantar:         "bg-emerald-50 text-emerald-700",
 } as const;
 
 function getStageIndex(stage: DriverActiveProcessStage) {
@@ -34,9 +40,7 @@ function getStageIndex(stage: DriverActiveProcessStage) {
 }
 
 function getMapsUrl(address: string) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    address,
-  )}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 }
 
 type ProgressStepperProps = {
@@ -48,7 +52,7 @@ function ProgressStepper({ currentStage }: ProgressStepperProps) {
 
   return (
     <div className="mt-6">
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-1">
         {activeProcessStages.map((stage, index) => {
           const completed = index < currentIndex;
           const active = index === currentIndex;
@@ -62,7 +66,7 @@ function ProgressStepper({ currentStage }: ProgressStepperProps) {
               {index < activeProcessStages.length - 1 ? (
                 <span
                   className={cn(
-                    "absolute left-[calc(50%+24px)] right-[calc(-50%+24px)] top-5 h-0.5 rounded-full",
+                    "absolute left-[calc(50%+20px)] right-[calc(-50%+20px)] top-5 h-0.5 rounded-full",
                     completed ? "bg-primary-500" : "bg-[var(--odong-border)]",
                   )}
                 />
@@ -84,11 +88,11 @@ function ProgressStepper({ currentStage }: ProgressStepperProps) {
               </span>
               <span
                 className={cn(
-                  "mt-2 text-[11px] font-semibold leading-4 sm:text-xs",
+                  "mt-2 text-[10px] font-semibold leading-4",
                   active ? "text-primary-700" : "text-[var(--odong-muted)]",
                 )}
               >
-                {stage.label}
+                {stage.shortLabel}
               </span>
             </div>
           );
@@ -104,10 +108,54 @@ export function ActiveOrderCard({
   onOpenDetail,
   isPending = false,
 }: ActiveOrderCardProps) {
-  const nextStage = getNextActiveStage(order.currentStage);
-  const actionLabel = nextStage
+  const [fotoFile, setFotoFile]       = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef                  = useRef<HTMLInputElement>(null);
+
+  const isDiantar  = order.currentStage === "diantar";
+  const nextStage  = getNextActiveStage(order.currentStage);
+  const actionLabel = isDiantar
+    ? "Konfirmasi Selesai"
+    : nextStage
     ? `Update: ${activeStageLabels[nextStage]}`
     : "Tandai Selesai";
+
+  const canAdvance = !isPending && !isUploading && (!isDiantar || fotoFile !== null);
+
+  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setFotoFile(file);
+    setUploadError(null);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => setFotoPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setFotoPreview(null);
+    }
+  };
+
+  const handleConfirmSelesai = async () => {
+    if (!fotoFile) return;
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      const reader = new FileReader();
+      const base64Url = await new Promise<string>((resolve, reject) => {
+        reader.onload  = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(fotoFile);
+      });
+      await uploadFotoBukti(order.id, base64Url);
+      onAdvanceStage(order.id);
+    } catch {
+      setUploadError("Gagal unggah foto, coba lagi.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <article className="rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-5 shadow-[0_18px_46px_rgba(25,28,29,0.07)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(25,28,29,0.10)] sm:p-6">
@@ -202,6 +250,45 @@ export function ActiveOrderCard({
         </span>
       </div>
 
+      {isDiantar && (
+        <div className="mt-4 rounded-3xl border-2 border-dashed border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-700 dark:bg-emerald-950/30">
+          <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">
+            Foto bukti pengiriman
+          </p>
+          {fotoPreview ? (
+            <div className="relative">
+              <img
+                src={fotoPreview}
+                alt="Pratinjau foto bukti"
+                className="h-32 w-full rounded-2xl object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => { setFotoFile(null); setFotoPreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                className="absolute right-2 top-2 rounded-full bg-black/50 px-2 py-1 text-xs font-bold text-white"
+              >
+                Ganti
+              </button>
+            </div>
+          ) : (
+            <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-emerald-200 py-6 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100/50 dark:border-emerald-700 dark:text-emerald-400">
+              <Camera className="h-8 w-8" aria-hidden="true" />
+              Pilih foto dari galeri
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleFotoChange}
+              />
+            </label>
+          )}
+          {uploadError && (
+            <p className="mt-2 text-xs font-semibold text-red-600">{uploadError}</p>
+          )}
+        </div>
+      )}
+
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <button
           type="button"
@@ -213,11 +300,11 @@ export function ActiveOrderCard({
         </button>
         <button
           type="button"
-          disabled={isPending}
-          onClick={() => onAdvanceStage(order.id)}
+          disabled={!canAdvance}
+          onClick={isDiantar ? handleConfirmSelesai : () => onAdvanceStage(order.id)}
           className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-extrabold text-white shadow-[0_14px_26px_rgba(0,88,202,0.22)] transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isPending ? "Memproses..." : actionLabel}
+          {isPending || isUploading ? "Memproses..." : actionLabel}
         </button>
       </div>
     </article>

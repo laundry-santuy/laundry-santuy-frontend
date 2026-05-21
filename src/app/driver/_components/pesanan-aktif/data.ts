@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  CheckCircle2,
   MapPinned,
   Shirt,
   Truck,
@@ -34,6 +35,12 @@ export const activeProcessStages: {
     icon: Shirt,
   },
   {
+    id: "siap-diantar",
+    label: "Siap Diantar",
+    shortLabel: "Siap",
+    icon: CheckCircle2,
+  },
+  {
     id: "diantar",
     label: "Diantar",
     shortLabel: "Antar",
@@ -46,6 +53,7 @@ export const activeStageFilters = [
   "Menuju Lokasi",
   "Dijemput",
   "Di Laundry",
+  "Siap Diantar",
   "Diantar",
 ] as const;
 
@@ -54,9 +62,10 @@ export const activeStageFilterMap: Record<
   DriverActiveProcessStage
 > = {
   "Menuju Lokasi": "menuju-lokasi",
-  Dijemput: "dijemput",
-  "Di Laundry": "di-laundry",
-  Diantar: "diantar",
+  Dijemput:        "dijemput",
+  "Di Laundry":    "di-laundry",
+  "Siap Diantar":  "siap-diantar",
+  Diantar:         "diantar",
 };
 
 export const activeOrders: DriverActiveOrder[] = [
@@ -134,9 +143,10 @@ export const activeOrders: DriverActiveOrder[] = [
 
 export const activeStageLabels = {
   "menuju-lokasi": "Menuju Lokasi",
-  dijemput: "Dijemput",
-  "di-laundry": "Di Laundry",
-  diantar: "Diantar",
+  dijemput:        "Dijemput",
+  "di-laundry":    "Di Laundry",
+  "siap-diantar":  "Siap Diantar",
+  diantar:         "Diantar",
 } as const;
 
 export function getNextActiveStage(

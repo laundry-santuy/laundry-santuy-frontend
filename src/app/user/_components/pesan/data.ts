@@ -2,12 +2,11 @@ import {
   BadgePercent,
   Banknote,
   Building2,
-  CreditCard,
   Home,
   Leaf,
+  QrCode,
   ShieldCheck,
   Truck,
-  Wallet,
 } from "lucide-react";
 import type {
   AddOnOption,
@@ -16,30 +15,60 @@ import type {
   PickupSlot,
 } from "./types";
 
-export const pickupSlots: PickupSlot[] = [
-  {
-    id: "today-afternoon",
-    day: "Hari ini",
-    date: "28 Apr",
-    window: "14.00 - 16.00",
-    capacity: "3 slot tersisa",
-    recommended: true,
-  },
-  {
-    id: "today-evening",
-    day: "Hari ini",
-    date: "28 Apr",
-    window: "18.00 - 20.00",
-    capacity: "5 slot tersisa",
-  },
-  {
-    id: "tomorrow-morning",
-    day: "Besok",
-    date: "29 Apr",
-    window: "09.00 - 11.00",
-    capacity: "8 slot tersisa",
-  },
-];
+function generatePickupSlots(): PickupSlot[] {
+  const now      = new Date();
+  const today    = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+
+  const todayStr    = formatDate(today);
+  const tomorrowStr = formatDate(tomorrow);
+  const currentHour = now.getHours();
+
+  const pad = (n: number) => n.toString().padStart(2, "0");
+
+  const capacityFor = (h: number) => {
+    if (h <= 10) return "8 slot tersisa";
+    if (h <= 12) return "5 slot tersisa";
+    if (h <= 16) return "3 slot tersisa";
+    return "6 slot tersisa";
+  };
+
+  const slots: PickupSlot[] = [];
+  let firstTodaySet = false;
+
+  for (let h = 8; h < 20; h++) {
+    const window = `${pad(h)}.00 - ${pad(h + 1)}.00`;
+
+    if (h > currentHour) {
+      const recommended = !firstTodaySet;
+      firstTodaySet = true;
+      slots.push({
+        id:       `today-${pad(h)}-${pad(h + 1)}`,
+        day:      "Hari ini",
+        date:     todayStr,
+        window,
+        capacity: capacityFor(h),
+        ...(recommended ? { recommended: true } : {}),
+      });
+    }
+
+    slots.push({
+      id:       `tomorrow-${pad(h)}-${pad(h + 1)}`,
+      day:      "Besok",
+      date:     tomorrowStr,
+      window,
+      capacity: capacityFor(h),
+    });
+  }
+
+  return slots;
+}
+
+export const pickupSlots: PickupSlot[] = generatePickupSlots();
 
 export const addressOptions: AddressOption[] = [
   {
@@ -93,21 +122,21 @@ export const addOnOptions: AddOnOption[] = [
 
 export const paymentOptions: PaymentOption[] = [
   {
-    id: "e-wallet",
-    label: "E-wallet",
-    description: "Bayar setelah berat final dikonfirmasi.",
-    icon: Wallet,
-  },
-  {
-    id: "bank-card",
-    label: "Kartu",
-    description: "Debit atau kartu kredit.",
-    icon: CreditCard,
-  },
-  {
-    id: "cash",
-    label: "Tunai",
-    description: "Bayar ke kurir saat pickup.",
+    id: "cod",
+    label: "COD",
+    description: "Bayar tunai ke kurir saat pengiriman selesai.",
     icon: Banknote,
+  },
+  {
+    id: "transfer_bank",
+    label: "Transfer Bank",
+    description: "Transfer manual ke rekening outlet setelah order dibuat.",
+    icon: Building2,
+  },
+  {
+    id: "qris",
+    label: "QRIS Outlet",
+    description: "Scan QRIS statis di outlet saat mengambil pakaian.",
+    icon: QrCode,
   },
 ];
