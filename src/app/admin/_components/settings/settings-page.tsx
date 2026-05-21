@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Bolt,
@@ -36,8 +36,15 @@ import {
   adminSecondaryButtonClass,
   adminSelectClass,
 } from "../admin-page";
+import { AdminDialog } from "../admin-dialog";
 import { OutletServicesPanel } from "./outlet-services-panel";
-import { updatePengaturanUmum, updatePengaturanOutlet } from "@/lib/admin-api";
+import {
+  createPengaturanOutlet,
+  deletePengaturanOutlet,
+  updatePengaturanUmum,
+  updatePengaturanOutlet,
+  type OutletBackend,
+} from "@/lib/admin-api";
 import { PromoCodesPanel } from "./promo-codes-panel";
 import {
   EmailSettingsPanel,
@@ -45,6 +52,7 @@ import {
   SecuritySettingsPanel,
 } from "./settings-side-panels";
 import type { SettingsData } from "./settings-client";
+import { OutletMapPicker } from "./outlet-map-picker";
 
 type SettingSectionId =
   | "umum"
@@ -149,10 +157,10 @@ function SectionLabel({
       id={`settings-tab-${id}`}
       aria-pressed={active}
       className={cn(
-        "flex min-h-16 min-w-0 items-start gap-3 rounded-[24px] border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300",
+        "flex min-h-16 min-w-0 items-start gap-3 rounded-3xl border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300",
         active
           ? "border-primary-100 bg-primary-50 text-primary-700 shadow-[0_12px_24px_rgba(0,88,202,0.08)]"
-          : "border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-muted)] hover:bg-primary-50/50",
+          : "border-(--odong-border) bg-(--odong-surface-strong) text-(--odong-muted) hover:bg-primary-50/50",
       )}
       onClick={onClick}
     >
@@ -160,17 +168,17 @@ function SectionLabel({
         className={cn(
           "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl",
           active
-            ? "bg-[var(--odong-surface-strong)] text-primary-600"
-            : "bg-[var(--odong-surface-muted)] text-[var(--odong-muted)]",
+            ? "bg-(--odong-surface-strong) text-primary-600"
+            : "bg-(--odong-surface-muted) text-(--odong-muted)",
         )}
       >
         <Icon className="h-5 w-5" aria-hidden="true" />
       </span>
       <span className="min-w-0">
-        <span className="block text-sm font-extrabold leading-tight text-[var(--odong-text)]">
+        <span className="block text-sm font-extrabold leading-tight text-(--odong-text)">
           {label}
         </span>
-        <span className="mt-1 block text-xs font-semibold leading-5 text-[var(--odong-muted)]">
+        <span className="mt-1 block text-xs font-semibold leading-5 text-(--odong-muted)">
           {description}
         </span>
       </span>
@@ -197,7 +205,7 @@ function SettingInput({
 }) {
   return (
     <label className={cn("block space-y-2", className)}>
-      <span className="text-sm font-extrabold text-[var(--odong-text)]">
+      <span className="text-sm font-extrabold text-(--odong-text)">
         {label}
       </span>
       <span className="relative block">
@@ -214,7 +222,7 @@ function SettingInput({
         />
       </span>
       {helper ? (
-        <p className="text-xs font-semibold leading-5 text-[var(--odong-muted)]">
+        <p className="text-xs font-semibold leading-5 text-(--odong-muted)">
           {helper}
         </p>
       ) : null}
@@ -241,7 +249,7 @@ function SettingSelect({
 }) {
   return (
     <label className={cn("block space-y-2", className)}>
-      <span className="text-sm font-extrabold text-[var(--odong-text)]">
+      <span className="text-sm font-extrabold text-(--odong-text)">
         {label}
       </span>
       <span className="relative block">
@@ -263,7 +271,7 @@ function SettingSelect({
         />
       </span>
       {helper ? (
-        <p className="text-xs font-semibold leading-5 text-[var(--odong-muted)]">
+        <p className="text-xs font-semibold leading-5 text-(--odong-muted)">
           {helper}
         </p>
       ) : null}
@@ -285,10 +293,10 @@ function ToggleSetting({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-[24px] border border-[var(--odong-border)] bg-[var(--odong-surface-muted)] p-4">
+    <div className="flex items-center justify-between gap-4 rounded-3xl border border-(--odong-border) bg-(--odong-surface-muted) p-4">
       <div className="min-w-0">
-        <p className="font-extrabold text-[var(--odong-text)]">{label}</p>
-        <p className="mt-1 max-w-[50ch] text-sm leading-6 text-[var(--odong-muted)]">
+        <p className="font-extrabold text-(--odong-text)">{label}</p>
+        <p className="mt-1 max-w-[50ch] text-sm leading-6 text-(--odong-muted)">
           {description}
         </p>
       </div>
@@ -301,12 +309,12 @@ function ToggleSetting({
         onClick={() => onChange(!checked)}
         className={cn(
           "flex h-9 w-16 shrink-0 items-center rounded-full p-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300",
-          checked ? "bg-primary-600" : "bg-[var(--odong-surface-soft)]",
+          checked ? "bg-primary-600" : "bg-(--odong-surface-soft)",
         )}
       >
         <span
           className={cn(
-            "h-7 w-7 rounded-full bg-[var(--odong-surface-strong)] shadow-[0_8px_16px_rgba(25,28,29,0.12)] transition",
+            "h-7 w-7 rounded-full bg-(--odong-surface-strong) shadow-[0_8px_16px_rgba(25,28,29,0.12)] transition",
             checked ? "translate-x-7" : "translate-x-0",
           )}
         />
@@ -327,12 +335,12 @@ function FeatureToggleSetting({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <div className="flex min-h-[58px] items-center justify-between gap-4 rounded-[24px] border border-[var(--odong-border)] bg-[var(--odong-surface-muted)] px-4 py-3">
+    <div className="flex min-h-14.5 items-center justify-between gap-4 rounded-3xl border border-(--odong-border) bg-(--odong-surface-muted) px-4 py-3">
       <div className="min-w-0">
-        <p className="text-sm font-extrabold leading-tight text-[var(--odong-text)]">
+        <p className="text-sm font-extrabold leading-tight text-(--odong-text)">
           {label}
         </p>
-        <p className="mt-1 text-xs font-semibold leading-5 text-[var(--odong-muted)]">
+        <p className="mt-1 text-xs font-semibold leading-5 text-(--odong-muted)">
           {description}
         </p>
       </div>
@@ -344,12 +352,12 @@ function FeatureToggleSetting({
         onClick={() => onChange(!checked)}
         className={cn(
           "flex h-8 w-14 shrink-0 items-center rounded-full p-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300",
-          checked ? "bg-primary-600" : "bg-[var(--odong-surface-soft)]",
+          checked ? "bg-primary-600" : "bg-(--odong-surface-soft)",
         )}
       >
         <span
           className={cn(
-            "h-6 w-6 rounded-full bg-[var(--odong-surface-strong)] shadow-[0_8px_16px_rgba(25,28,29,0.12)] transition",
+            "h-6 w-6 rounded-full bg-(--odong-surface-strong) shadow-[0_8px_16px_rgba(25,28,29,0.12)] transition",
             checked ? "translate-x-6" : "translate-x-0",
           )}
         />
@@ -370,20 +378,76 @@ function SectionHint({
   return (
     <div className="rounded-[28px] border border-primary-100 bg-primary-50/70 p-5">
       <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--odong-surface-strong)] text-primary-600">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--odong-surface-strong) text-primary-600">
           <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <p className="text-base font-extrabold text-[var(--odong-text)]">
+          <p className="text-base font-extrabold text-(--odong-text)">
             {title}
           </p>
-          <p className="mt-1 text-sm leading-6 text-[var(--odong-muted)]">
+          <p className="mt-1 text-sm leading-6 text-(--odong-muted)">
             {description}
           </p>
         </div>
       </div>
     </div>
   );
+}
+
+function outletToSettings(outlet: OutletBackend): Partial<AdminSettingValues> {
+  return {
+    defaultOutlet: outlet.namaOutlet || defaultAdminSettings.defaultOutlet,
+    outletAddress: outlet.alamatOutlet || defaultAdminSettings.outletAddress,
+    outletEmail: outlet.email || defaultAdminSettings.outletEmail,
+    outletPhone: outlet.nomorTelepon || defaultAdminSettings.outletPhone,
+    outletLatitude:
+      outlet.latitude != null
+        ? String(outlet.latitude)
+        : defaultAdminSettings.outletLatitude,
+    outletLongitude:
+      outlet.longitude != null
+        ? String(outlet.longitude)
+        : defaultAdminSettings.outletLongitude,
+    openTime: outlet.jamMulai || defaultAdminSettings.openTime,
+    closeTime: outlet.jamSelesai || defaultAdminSettings.closeTime,
+  };
+}
+
+type OutletDraft = {
+  namaOutlet: string;
+  alamatOutlet: string;
+  email: string;
+  nomorTelepon: string;
+  latitude: string;
+  longitude: string;
+  jamMulai: string;
+  jamSelesai: string;
+};
+
+function emptyOutletDraft(): OutletDraft {
+  return {
+    namaOutlet: "",
+    alamatOutlet: "",
+    email: "",
+    nomorTelepon: "",
+    latitude: "",
+    longitude: "",
+    jamMulai: defaultAdminSettings.openTime,
+    jamSelesai: defaultAdminSettings.closeTime,
+  };
+}
+
+function outletDraftFromBackend(outlet: OutletBackend): OutletDraft {
+  return {
+    namaOutlet: outlet.namaOutlet ?? "",
+    alamatOutlet: outlet.alamatOutlet ?? "",
+    email: outlet.email ?? "",
+    nomorTelepon: outlet.nomorTelepon ?? "",
+    latitude: outlet.latitude != null ? String(outlet.latitude) : "",
+    longitude: outlet.longitude != null ? String(outlet.longitude) : "",
+    jamMulai: outlet.jamMulai ?? defaultAdminSettings.openTime,
+    jamSelesai: outlet.jamSelesai ?? defaultAdminSettings.closeTime,
+  };
 }
 
 export function AdminSettingsPage({
@@ -419,6 +483,16 @@ export function AdminSettingsPage({
       // Outlet settings
       defaultOutlet: outlet.pengaturanOutlet?.namaOutlet || defaultAdminSettings.defaultOutlet,
       outletAddress: outlet.pengaturanOutlet?.alamatOutlet || defaultAdminSettings.outletAddress,
+      outletEmail: outlet.pengaturanOutlet?.email || defaultAdminSettings.outletEmail,
+      outletPhone: outlet.pengaturanOutlet?.nomorTelepon || defaultAdminSettings.outletPhone,
+      outletLatitude:
+        outlet.pengaturanOutlet?.latitude != null
+          ? String(outlet.pengaturanOutlet.latitude)
+          : defaultAdminSettings.outletLatitude,
+      outletLongitude:
+        outlet.pengaturanOutlet?.longitude != null
+          ? String(outlet.pengaturanOutlet.longitude)
+          : defaultAdminSettings.outletLongitude,
       openTime: outlet.pengaturanOutlet?.jamMulai || defaultAdminSettings.openTime,
       closeTime: outlet.pengaturanOutlet?.jamSelesai || defaultAdminSettings.closeTime,
 
@@ -436,7 +510,16 @@ export function AdminSettingsPage({
   const [settings, setSettings] =
     useState<AdminSettingValues>(getInitialSettings());
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<{
+    tone: "success" | "error";
+    message: string;
+  } | null>(null);
   const [activeSection, setActiveSection] = useState<SettingSectionId>("umum");
+  const [outletRecords, setOutletRecords] = useState<OutletBackend[]>([]);
+  const [outletDraft, setOutletDraft] = useState<OutletDraft>(emptyOutletDraft());
+  const [editOutletDraft, setEditOutletDraft] = useState<OutletDraft | null>(null);
+  const [editOutletId, setEditOutletId] = useState<string | null>(null);
+  const [deleteOutletId, setDeleteOutletId] = useState<string | null>(null);
   const [outletPanelKey, setOutletPanelKey] = useState(0);
   const [promoDraft, setPromoDraft] =
     useState<PromoDraft>(defaultPromoDraft);
@@ -459,6 +542,16 @@ export function AdminSettingsPage({
     [promoCampaigns],
   );
   const latestActivePromo = promoCampaigns.find((campaign) => campaign.active);
+
+  const outletList = outletRecords;
+
+  useEffect(() => {
+    setSettings(getInitialSettings());
+  }, [settingsData]);
+
+  useEffect(() => {
+    setOutletRecords(settingsData?.outlet?.semuaOutlet ?? []);
+  }, [settingsData]);
 
   const updateSetting = <Key extends keyof AdminSettingValues>(
     key: Key,
@@ -529,6 +622,117 @@ export function AdminSettingsPage({
     focusSettingField("settings-promo-code");
   };
 
+  const handleOpenEditOutlet = (outlet: OutletBackend) => {
+    setEditOutletId(outlet.id_outlet);
+    setEditOutletDraft(outletDraftFromBackend(outlet));
+    setSaveFeedback(null);
+  };
+
+  const handleCreateOutlet = async () => {
+    const name = outletDraft.namaOutlet.trim();
+
+    if (!name) {
+      setSaveFeedback({ tone: "error", message: "Nama outlet harus diisi." });
+      return;
+    }
+
+    try {
+      const result = await createPengaturanOutlet({
+        namaOutlet: name,
+        alamatOutlet: outletDraft.alamatOutlet,
+        email: outletDraft.email,
+        nomorTelepon: outletDraft.nomorTelepon,
+        latitude: outletDraft.latitude ? Number(outletDraft.latitude) : null,
+        longitude: outletDraft.longitude ? Number(outletDraft.longitude) : null,
+        jamMulai: outletDraft.jamMulai,
+        jamSelesai: outletDraft.jamSelesai,
+      });
+
+      const nextOutlet = result.pengaturanOutlet;
+      setOutletRecords((current) => [...current, nextOutlet]);
+      setOutletDraft(emptyOutletDraft());
+      setSaveFeedback({ tone: "success", message: "Outlet berhasil ditambahkan." });
+      setOutletPanelKey((key) => key + 1);
+    } catch (error) {
+      setSaveFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Gagal menambahkan outlet.",
+      });
+    }
+  };
+
+  const handleSaveEditOutlet = async () => {
+    if (!editOutletId || !editOutletDraft) {
+      return;
+    }
+
+    const name = editOutletDraft.namaOutlet.trim();
+    if (!name) {
+      setSaveFeedback({ tone: "error", message: "Nama outlet harus diisi." });
+      return;
+    }
+
+    try {
+      await updatePengaturanOutlet({
+        id_outlet: editOutletId,
+        namaOutlet: name,
+        alamatOutlet: editOutletDraft.alamatOutlet,
+        email: editOutletDraft.email,
+        nomorTelepon: editOutletDraft.nomorTelepon,
+        latitude: editOutletDraft.latitude ? Number(editOutletDraft.latitude) : null,
+        longitude: editOutletDraft.longitude ? Number(editOutletDraft.longitude) : null,
+        jamMulai: editOutletDraft.jamMulai,
+        jamSelesai: editOutletDraft.jamSelesai,
+      });
+
+      setOutletRecords((current) =>
+        current.map((outlet) =>
+          outlet.id_outlet === editOutletId
+            ? {
+                ...outlet,
+                ...editOutletDraft,
+                id_outlet: editOutletId,
+                latitude: editOutletDraft.latitude ? Number(editOutletDraft.latitude) : null,
+                longitude: editOutletDraft.longitude ? Number(editOutletDraft.longitude) : null,
+              }
+            : outlet,
+        ),
+      );
+      setEditOutletDraft(null);
+      setEditOutletId(null);
+      setSaveFeedback({ tone: "success", message: "Outlet berhasil diperbarui." });
+      setOutletPanelKey((key) => key + 1);
+    } catch (error) {
+      setSaveFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Gagal menyimpan outlet.",
+      });
+    }
+  };
+
+  const handleDeleteOutlet = async (idOutlet: string) => {
+    try {
+      await deletePengaturanOutlet(idOutlet);
+
+      const remainingOutlets = outletList.filter((outlet) => outlet.id_outlet !== idOutlet);
+      setOutletRecords(remainingOutlets);
+      if (editOutletId === idOutlet) {
+        setEditOutletId(null);
+        setEditOutletDraft(null);
+      }
+
+      setDeleteOutletId(null);
+      setOutletPanelKey((key) => key + 1);
+      setSaveFeedback({ tone: "success", message: "Outlet berhasil dihapus." });
+    } catch (error) {
+      setDeleteOutletId(null);
+      setSaveFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Gagal menghapus outlet.",
+      });
+    }
+  };
+
   const togglePromoCampaign = (campaignId: string) => {
     const nextCampaigns = promoCampaigns.map((campaign) =>
       campaign.id === campaignId
@@ -541,6 +745,8 @@ export function AdminSettingsPage({
   };
 
   const saveSettings = async () => {
+    setSaveFeedback(null);
+
     try {
       // persist promo campaigns locally
       persistPromoCampaigns();
@@ -561,19 +767,9 @@ export function AdminSettingsPage({
         },
       };
 
-      const outletPayload = {
-        namaOutlet: settings.defaultOutlet,
-        alamatOutlet: settings.outletAddress,
-        email: settings.outletEmail,
-        nomorTelepon: settings.supportPhone,
-        jamMulai: settings.openTime,
-        jamSelesai: settings.closeTime,
-      };
+      await updatePengaturanUmum(umumPayload);
 
-      await Promise.all([
-        updatePengaturanUmum(umumPayload),
-        updatePengaturanOutlet(outletPayload),
-      ]);
+      setOutletPanelKey((key) => key + 1);
 
       setSavedAt(
         new Date().toLocaleTimeString("id-ID", {
@@ -581,9 +777,11 @@ export function AdminSettingsPage({
           minute: "2-digit",
         }),
       );
+      setSaveFeedback({ tone: "success", message: "Pengaturan umum berhasil disimpan." });
       setPromoFeedback({ tone: "success", message: "Pengaturan berhasil disimpan." });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal menyimpan pengaturan";
+      setSaveFeedback({ tone: "error", message });
       setPromoFeedback({ tone: "error", message });
     }
   };
@@ -620,17 +818,6 @@ export function AdminSettingsPage({
   const settingsGridClass = hasWideSidePanel
     ? "xl:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)]"
     : "xl:grid-cols-[minmax(0,1fr)_340px]";
-  const operationalHours = `${settings.openTime} - ${settings.closeTime}`;
-
-  const updateOperationalHours = (value: string) => {
-    const [openTime, closeTime] = value.split("-").map((part) => part.trim());
-
-    updateSetting("openTime", openTime || settings.openTime);
-
-    if (closeTime) {
-      updateSetting("closeTime", closeTime);
-    }
-  };
 
   return (
     <div className="space-y-5">
@@ -692,6 +879,19 @@ export function AdminSettingsPage({
           },
         ]}
       />
+
+      {saveFeedback ? (
+        <div
+          className={cn(
+            "rounded-3xl border px-4 py-3 text-sm font-semibold",
+            saveFeedback.tone === "success"
+              ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+              : "border-rose-100 bg-rose-50 text-rose-600",
+          )}
+        >
+          {saveFeedback.message}
+        </div>
+      ) : null}
 
       <div
         aria-label="Bagian pengaturan"
@@ -758,58 +958,73 @@ export function AdminSettingsPage({
                 <SettingInput
                   className="md:col-span-2"
                   label="Nama Outlet"
-                  value={settings.defaultOutlet}
-                  onChange={(value) => updateSetting("defaultOutlet", value)}
+                  value={outletDraft.namaOutlet}
+                  onChange={(value) =>
+                    setOutletDraft((current) => ({ ...current, namaOutlet: value }))
+                  }
                 />
-                <SettingInput
-                  className="md:col-span-2"
-                  label="Alamat Outlet"
-                  value={settings.outletAddress}
-                  onChange={(value) => updateSetting("outletAddress", value)}
-                />
-                <SettingInput
-                  className="md:col-span-2"
-                  label="Jam Operasional"
-                  value={operationalHours}
-                  onChange={updateOperationalHours}
-                  helper="Format 08:00 - 21:00."
-                />
-              </div>
-
-              <div className="space-y-4 rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface-muted)] p-4">
-                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--odong-muted-soft)]">
-                  Operasional tambahan
-                </p>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <SettingInput
-                    label="Radius pickup"
-                    value={settings.pickupRadiusKm}
-                    onChange={(value) => updateSetting("pickupRadiusKm", value)}
-                    helper="Gunakan angka desimal, misalnya 4.5."
-                  />
-                  <SettingInput
-                    label="Kapasitas harian"
-                    value={settings.dailyCapacityKg}
-                    onChange={(value) => updateSetting("dailyCapacityKg", value)}
-                    helper="Dalam kilogram laundry."
-                  />
-                </div>
-                <div className="space-y-3">
-                  <ToggleSetting
-                    label="Auto assign kurir"
-                    description="Pesanan baru otomatis diarahkan ke kurir tersedia."
-                    checked={settings.autoAssignCourier}
-                    onChange={(value) =>
-                      updateSetting("autoAssignCourier", value)
+                <div className="md:col-span-2">
+                  <OutletMapPicker
+                    address={outletDraft.alamatOutlet}
+                    latitude={outletDraft.latitude}
+                    longitude={outletDraft.longitude}
+                    onAddressChange={(value) =>
+                      setOutletDraft((current) => ({ ...current, alamatOutlet: value }))
+                    }
+                    onLatitudeChange={(value) =>
+                      setOutletDraft((current) => ({ ...current, latitude: value }))
+                    }
+                    onLongitudeChange={(value) =>
+                      setOutletDraft((current) => ({ ...current, longitude: value }))
                     }
                   />
-                  <ToggleSetting
-                    label="Pembayaran COD"
-                    description="Pelanggan bisa membayar saat laundry diambil."
-                    checked={settings.codEnabled}
-                    onChange={(value) => updateSetting("codEnabled", value)}
-                  />
                 </div>
+                <SettingInput
+                  label="Email Outlet"
+                  type="email"
+                  value={outletDraft.email}
+                  onChange={(value) =>
+                    setOutletDraft((current) => ({ ...current, email: value }))
+                  }
+                />
+                <SettingInput
+                  label="Nomor Telepon Outlet"
+                  type="tel"
+                  value={outletDraft.nomorTelepon}
+                  onChange={(value) =>
+                    setOutletDraft((current) => ({ ...current, nomorTelepon: value }))
+                  }
+                />
+                <SettingInput
+                  label="Jam Buka"
+                  value={outletDraft.jamMulai}
+                  onChange={(value) =>
+                    setOutletDraft((current) => ({ ...current, jamMulai: value }))
+                  }
+                  helper="Format 08:00."
+                />
+                <SettingInput
+                  label="Jam Tutup"
+                  value={outletDraft.jamSelesai}
+                  onChange={(value) =>
+                    setOutletDraft((current) => ({ ...current, jamSelesai: value }))
+                  }
+                  helper="Format 21:00."
+                />
+              </div>
+              <div className="flex flex-col gap-3 border-t border-(--odong-border) pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm leading-6 text-(--odong-muted)">
+                  Form ini hanya untuk menambah outlet baru. Edit outlet lama
+                  dilakukan lewat popup di daftar outlet.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void handleCreateOutlet()}
+                  className={adminPrimaryButtonClass}
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Tambah outlet
+                </button>
               </div>
             </div>
           ) : null}
@@ -822,10 +1037,10 @@ export function AdminSettingsPage({
                     <p className="text-xs font-bold uppercase tracking-[0.08em] text-primary-600">
                       Preview promo
                     </p>
-                    <h4 className="mt-2 text-xl font-extrabold leading-tight text-[var(--odong-text)]">
+                    <h4 className="mt-2 text-xl font-extrabold leading-tight text-(--odong-text)">
                       Hemat {promoDraft.discount || defaultPromoDraft.discount} untuk Express
                     </h4>
-                    <p className="mt-2 text-sm leading-6 text-[var(--odong-muted)]">
+                    <p className="mt-2 text-sm leading-6 text-(--odong-muted)">
                       Tarif dasar {promoDraft.basePrice || defaultPromoDraft.basePrice} • Express{" "}
                       {promoDraft.expressSurcharge ||
                         defaultPromoDraft.expressSurcharge}{" "}
@@ -833,11 +1048,11 @@ export function AdminSettingsPage({
                       {promoDraft.minimumOrder || defaultPromoDraft.minimumOrder}
                     </p>
                   </div>
-                  <div className="shrink-0 rounded-[22px] bg-[var(--odong-surface-strong)] px-4 py-3 text-right shadow-[0_10px_20px_rgba(0,88,202,0.06)]">
+                  <div className="shrink-0 rounded-[22px] bg-(--odong-surface-strong) px-4 py-3 text-right shadow-[0_10px_20px_rgba(0,88,202,0.06)]">
                     <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary-600">
                       Kode
                     </p>
-                    <p className="mt-1 font-mono text-lg font-extrabold tracking-wide text-[var(--odong-text)]">
+                    <p className="mt-1 font-mono text-lg font-extrabold tracking-wide text-(--odong-text)">
                       {(promoDraft.code || defaultPromoDraft.code).toUpperCase()}
                     </p>
                   </div>
@@ -893,7 +1108,7 @@ export function AdminSettingsPage({
               {promoFeedback ? (
                 <div
                   className={cn(
-                    "rounded-[24px] border px-4 py-3 text-sm font-semibold",
+                    "rounded-3xl border px-4 py-3 text-sm font-semibold",
                     promoFeedback.tone === "success"
                       ? "border-emerald-100 bg-emerald-50 text-emerald-600"
                       : "border-rose-100 bg-rose-50 text-rose-600",
@@ -903,8 +1118,8 @@ export function AdminSettingsPage({
                 </div>
               ) : null}
 
-              <div className="flex flex-col gap-3 border-t border-[var(--odong-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm leading-6 text-[var(--odong-muted)]">
+              <div className="flex flex-col gap-3 border-t border-(--odong-border) pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm leading-6 text-(--odong-muted)">
                   Klik tambahkan untuk memasukkan preview ini ke daftar kode
                   promo aktif di kanan.
                 </p>
@@ -1005,9 +1220,76 @@ export function AdminSettingsPage({
           {isOutletSection ? (
             <>
               <OutletServicesPanel key={outletPanelKey} />
+              <AdminPanel
+                title="Daftar Outlet"
+                description="Klik edit untuk mengubah outlet tertentu lewat popup, atau hapus jika sudah tidak dipakai."
+                icon={Store}
+              >
+                {outletList.length > 0 ? (
+                  <div className="space-y-3">
+                    {outletList.map((outlet) => {
+                      return (
+                        <div
+                          key={outlet.id_outlet ?? outlet.namaOutlet}
+                          className="rounded-3xl border border-(--odong-border) bg-(--odong-surface-muted) px-4 py-4"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-extrabold text-(--odong-text)">
+                                {outlet.namaOutlet || "Outlet tanpa nama"}
+                              </p>
+                              <p className="mt-1 wrap-break-word text-xs font-semibold leading-5 text-(--odong-muted)">
+                                {outlet.alamatOutlet || "Alamat belum diisi"}
+                              </p>
+                              <p className="mt-1 text-xs font-semibold leading-5 text-(--odong-muted-soft)">
+                                {outlet.email || "Email belum diisi"} • {outlet.nomorTelepon || "Telepon belum diisi"}
+                              </p>
+                              <div className="mt-3 flex items-center justify-between gap-3 text-xs font-semibold text-(--odong-muted)">
+                                <span>
+                                  Jam: {outlet.jamMulai || "--:--"} - {outlet.jamSelesai || "--:--"}
+                                </span>
+                                <span>
+                                  Koordinat: {outlet.latitude != null && outlet.longitude != null
+                                    ? `${outlet.latitude.toFixed(5)}, ${outlet.longitude.toFixed(5)}`
+                                    : "Belum ada"}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditOutlet(outlet)}
+                                className="inline-flex h-10 items-center justify-center rounded-2xl border border-primary-100 bg-primary-50 px-3 text-xs font-bold text-primary-700 transition hover:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteOutletId(outlet.id_outlet)}
+                                className="inline-flex h-10 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 px-3 text-xs font-bold text-rose-600 transition hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+                              >
+                                Hapus
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-3xl border border-dashed border-(--odong-border) bg-(--odong-surface-muted) p-6 text-center">
+                    <p className="text-sm font-extrabold text-(--odong-text)">
+                      Belum ada outlet di database
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-(--odong-muted)">
+                      Outlet akan muncul di sini setelah tersimpan di database.
+                    </p>
+                  </div>
+                )}
+              </AdminPanel>
               <SaveStatusCard
                 savedAt={savedAt}
-                idleMessage="Perubahan layanan langsung tersimpan ke database."
+                idleMessage="Perubahan outlet langsung tersimpan setelah ditambahkan, diedit, atau dihapus."
               />
             </>
           ) : null}
@@ -1076,6 +1358,140 @@ export function AdminSettingsPage({
           ) : null}
         </aside>
       </section>
+
+      <AdminDialog
+        open={Boolean(editOutletId && editOutletDraft)}
+        title="Edit outlet"
+        description="Perbarui data outlet ini tanpa mengubah outlet lain."
+        onClose={() => {
+          setEditOutletId(null);
+          setEditOutletDraft(null);
+        }}
+        size="lg"
+      >
+        {editOutletDraft ? (
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <SettingInput
+                className="md:col-span-2"
+                label="Nama Outlet"
+                value={editOutletDraft.namaOutlet}
+                onChange={(value) =>
+                  setEditOutletDraft((current) =>
+                    current ? { ...current, namaOutlet: value } : current,
+                  )
+                }
+              />
+              <div className="md:col-span-2">
+                <OutletMapPicker
+                  address={editOutletDraft.alamatOutlet}
+                  latitude={editOutletDraft.latitude}
+                  longitude={editOutletDraft.longitude}
+                  onAddressChange={(value) =>
+                    setEditOutletDraft((current) =>
+                      current ? { ...current, alamatOutlet: value } : current,
+                    )
+                  }
+                  onLatitudeChange={(value) =>
+                    setEditOutletDraft((current) =>
+                      current ? { ...current, latitude: value } : current,
+                    )
+                  }
+                  onLongitudeChange={(value) =>
+                    setEditOutletDraft((current) =>
+                      current ? { ...current, longitude: value } : current,
+                    )
+                  }
+                />
+              </div>
+              <SettingInput
+                label="Email Outlet"
+                type="email"
+                value={editOutletDraft.email}
+                onChange={(value) =>
+                  setEditOutletDraft((current) =>
+                    current ? { ...current, email: value } : current,
+                  )
+                }
+              />
+              <SettingInput
+                label="Nomor Telepon Outlet"
+                type="tel"
+                value={editOutletDraft.nomorTelepon}
+                onChange={(value) =>
+                  setEditOutletDraft((current) =>
+                    current ? { ...current, nomorTelepon: value } : current,
+                  )
+                }
+              />
+              <SettingInput
+                label="Jam Buka"
+                value={editOutletDraft.jamMulai}
+                onChange={(value) =>
+                  setEditOutletDraft((current) =>
+                    current ? { ...current, jamMulai: value } : current,
+                  )
+                }
+              />
+              <SettingInput
+                label="Jam Tutup"
+                value={editOutletDraft.jamSelesai}
+                onChange={(value) =>
+                  setEditOutletDraft((current) =>
+                    current ? { ...current, jamSelesai: value } : current,
+                  )
+                }
+              />
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditOutletId(null);
+                  setEditOutletDraft(null);
+                }}
+                className={adminSecondaryButtonClass}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSaveEditOutlet()}
+                className={adminPrimaryButtonClass}
+              >
+                <Save className="h-4 w-4" aria-hidden="true" />
+                Simpan outlet
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </AdminDialog>
+
+      <AdminDialog
+        open={Boolean(deleteOutletId)}
+        title="Hapus outlet?"
+        description="Outlet yang dihapus akan ikut menghapus layanan yang menempel padanya. Tindakan ini tidak bisa dibatalkan."
+        onClose={() => setDeleteOutletId(null)}
+        size="sm"
+      >
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setDeleteOutletId(null)}
+            className={adminSecondaryButtonClass}
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={() => deleteOutletId && void handleDeleteOutlet(deleteOutletId)}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-[20px] bg-rose-600 px-5 text-sm font-bold text-white transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 active:scale-[0.98]"
+          >
+            Hapus outlet
+          </button>
+        </div>
+      </AdminDialog>
     </div>
   );
 }

@@ -20,6 +20,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
+    cache: options?.cache ?? 'no-store',
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
