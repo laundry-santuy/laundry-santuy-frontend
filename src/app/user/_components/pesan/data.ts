@@ -37,7 +37,8 @@ function generatePickupSlots(): PickupSlot[] {
     return "6 slot tersisa";
   };
 
-  const slots: PickupSlot[] = [];
+  const todaySlots: PickupSlot[] = [];
+  const tomorrowSlots: PickupSlot[] = [];
   let firstTodaySet = false;
 
   for (let h = 8; h < 20; h++) {
@@ -46,7 +47,7 @@ function generatePickupSlots(): PickupSlot[] {
     if (h > currentHour) {
       const recommended = !firstTodaySet;
       firstTodaySet = true;
-      slots.push({
+      todaySlots.push({
         id:       `today-${pad(h)}-${pad(h + 1)}`,
         day:      "Hari ini",
         date:     todayStr,
@@ -56,7 +57,7 @@ function generatePickupSlots(): PickupSlot[] {
       });
     }
 
-    slots.push({
+    tomorrowSlots.push({
       id:       `tomorrow-${pad(h)}-${pad(h + 1)}`,
       day:      "Besok",
       date:     tomorrowStr,
@@ -65,7 +66,8 @@ function generatePickupSlots(): PickupSlot[] {
     });
   }
 
-  return slots;
+  // Today's remaining slots first, then tomorrow's full range
+  return [...todaySlots, ...tomorrowSlots];
 }
 
 export const pickupSlots: PickupSlot[] = generatePickupSlots();

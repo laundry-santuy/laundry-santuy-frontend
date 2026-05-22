@@ -43,6 +43,24 @@ type TrackingPageProps = {
   status?: TrackingPageStatus;
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  menunggu:      "Menunggu Kurir",
+  menuju_lokasi: "Kurir Menuju Lokasi",
+  dijemput:      "Cucian Dijemput",
+  di_laundry:    "Sedang Dicuci",
+  siap_diantar:  "Siap Diantar",
+  diantar:       "Dalam Pengiriman",
+  selesai:       "Selesai",
+  dibatalkan:    "Dibatalkan",
+  ditolak:       "Ditolak",
+};
+
+function formatStatusLabel(raw: string | null | undefined): string {
+  if (!raw) return "Menunggu Kurir";
+  const key = raw.toLowerCase().trim().replace(/\s+/g, "_");
+  return STATUS_LABEL[key] ?? raw.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 const STEP_ICONS = [Truck, Package, Sparkles, Shirt, MapPin, CheckCircle2] as const;
 
 const STATIC_INSIGHTS: TrackingInsight[] = [
@@ -130,7 +148,7 @@ function mapToTrackingOrder(data: LacakResponse, aiEtaLabel?: string): TrackingO
   return {
     id: detail?.kodePesanan ?? "-",
     service: detail?.namaLayanan ?? "Layanan",
-    statusLabel: detail?.status ?? "menunggu",
+    statusLabel: formatStatusLabel(detail?.status),
     statusDescription: "Status pesanan kamu diperbarui secara real-time.",
     tone: "active",
     eta: etaDisplay,

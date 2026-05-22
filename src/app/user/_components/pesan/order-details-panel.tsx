@@ -1,6 +1,7 @@
 import {
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   MapPin,
   Minus,
   Plus,
@@ -116,47 +117,45 @@ export function OrderDetailsPanel({
           </p>
         </div>
 
-        <fieldset>
-          <legend className="text-sm font-bold text-[var(--odong-text)]">
+        <div>
+          <label
+            htmlFor="slot-pickup"
+            className="text-sm font-bold text-[var(--odong-text)]"
+          >
             Slot pickup
-          </legend>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            {slots.map((slot) => {
-              const selected = slot.id === selectedSlotId;
-
-              return (
-                <button
-                  key={slot.id}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => onSelectSlot(slot.id)}
-                  className={cn(
-                    "rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.99]",
-                    selected
-                      ? "border-primary-200 bg-primary-50 text-primary-700"
-                      : "border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-text)] hover:border-primary-100",
-                  )}
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-extrabold">{slot.day}</span>
-                    {selected ? (
-                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                    ) : null}
-                  </span>
-                  <span className="mt-1 block text-xs font-semibold opacity-75">
-                    {slot.date}
-                  </span>
-                  <span className="mt-3 block text-sm font-bold">
-                    {slot.window}
-                  </span>
-                  <span className="mt-1 block text-xs opacity-70">
-                    {slot.capacity}
-                  </span>
-                </button>
-              );
-            })}
+          </label>
+          <div className="relative mt-3">
+            <select
+              id="slot-pickup"
+              value={selectedSlotId}
+              onChange={(e) => onSelectSlot(e.target.value)}
+              className="w-full appearance-none rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] py-3 pl-4 pr-10 text-sm font-semibold text-[var(--odong-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200"
+            >
+              <option value="" disabled>
+                Pilih slot waktu...
+              </option>
+              {slots.map((slot) => (
+                <option key={slot.id} value={slot.id}>
+                  {slot.day}, {slot.date} · {slot.window}
+                  {slot.recommended ? " ★" : ""} — {slot.capacity}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--odong-muted)]"
+              aria-hidden="true"
+            />
           </div>
-        </fieldset>
+          {selectedSlotId && (() => {
+            const slot = slots.find((s) => s.id === selectedSlotId);
+            return slot ? (
+              <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary-700">
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                {slot.day}, {slot.date} · {slot.window} · {slot.capacity}
+              </p>
+            ) : null;
+          })()}
+        </div>
       </div>
 
       <div className="mt-7 grid gap-6 lg:grid-cols-2">
