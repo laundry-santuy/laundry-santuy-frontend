@@ -1,4 +1,5 @@
 "use client";
+import { BASE_URL } from "@/lib/api-client";
 import { useEffect, useState } from "react";
 
 interface ApiResponse {
@@ -10,7 +11,7 @@ export default function Home() {
   const [data, setData] = useState<ApiResponse | null>(null);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/test-db`)
+    fetch(`${BASE_URL}/test-db`)
       .then((res) => res.json())
       .then((resData) => setData(resData))
       .catch((err) => console.error("Error fetching message:", err));

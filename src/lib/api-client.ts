@@ -1,4 +1,13 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000';
+function buildBaseUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL;
+  if (!raw || raw.trim() === '') return 'http://localhost:5000';
+  const trimmed = raw.trim().replace(/\/+$/, '');
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  // Jika tidak ada protokol, paksa https:// supaya tidak jadi relative path
+  return `https://${trimmed}`;
+}
+
+export const BASE_URL = buildBaseUrl();
 
 export class ApiError extends Error {
   constructor(

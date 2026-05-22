@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE_URL } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import {
   Bike,
@@ -45,7 +46,7 @@ export default function LoginPage() {
 
     try {
       const res  = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login/general`,
+        `${BASE_URL}/api/auth/login/general`,
         {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
