@@ -288,6 +288,10 @@ export function createPesananAdmin(body: CreatePesananAdminBody): Promise<{ mess
   return apiClient.post('/api/admin/pesanan', body);
 }
 
+export function deletePesananAdmin(id: string): Promise<{ message: string }> {
+  return apiClient.del(`/api/admin/pesanan/${id}`);
+}
+
 export function updateLayanan(
   id: string,
   body: UpdateLayananBody,

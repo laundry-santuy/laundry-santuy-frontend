@@ -35,7 +35,7 @@ import {
   AdminIconButton,
   AdminPaginationBar,
 } from "../admin-table-tools";
-import { fetchManajemenPesanan, fetchPengaturanOutlet, fetchManajemenUser, updatePesananStatus, createPesananAdmin } from "@/lib/admin-api";
+import { fetchManajemenPesanan, fetchPengaturanOutlet, fetchManajemenUser, updatePesananStatus, createPesananAdmin, deletePesananAdmin } from "@/lib/admin-api";
 import type { AdminOrder, AdminOrderStatus } from "../types";
 
 const PAGE_SIZE = 5;
@@ -408,11 +408,15 @@ export function AdminOrderManagementPage() {
     closeOrderForm();
   };
 
-  const confirmDeleteOrder = () => {
-    if (!deleteOrder) {
+  const confirmDeleteOrder = async () => {
+    if (!deleteOrder) return;
+    try {
+      await deletePesananAdmin(deleteOrder.id);
+    } catch (err: any) {
+      alert(err?.message ?? "Gagal menghapus pesanan.");
+      setDeleteOrder(null);
       return;
     }
-
     setOrders((currentOrders) =>
       currentOrders.filter((order) => order.id !== deleteOrder.id),
     );
