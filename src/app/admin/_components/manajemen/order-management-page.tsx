@@ -366,16 +366,23 @@ export function AdminOrderManagementPage() {
 
     if (orderModalMode === "edit" && editingOrder) {
         const newStatus = orderForm.status;
-        // If status changed to ReadyForDelivery, call backend to persist
-        if (newStatus === "ReadyForDelivery" && editingOrder.id) {
+
+        if (editingOrder.id && newStatus !== editingOrder.status) {
+          const statusMap: Record<string, string> = {
+            Pending: 'menunggu',
+            Processing: 'di_laundry',
+            ReadyForDelivery: 'siap_diantar',
+            Completed: 'selesai',
+            Cancelled: 'dibatalkan',
+          };
+
+          const backendStatus = statusMap[newStatus] ?? newStatus;
+
           try {
-            // backend expects 'siap_diantar'
-            await updatePesananStatus(editingOrder.id, "siap_diantar");
+            await updatePesananStatus(editingOrder.id, backendStatus);
           } catch (err: any) {
             console.error("Failed to update status on server:", err);
-            // show simple alert to user
             alert(err?.message || "Gagal memperbarui status pesanan di server");
-            // do not update local state if server update failed
             closeOrderForm();
             return;
           }
@@ -386,7 +393,8 @@ export function AdminOrderManagementPage() {
             order.id === editingOrder.id
               ? {
                   ...order,
-                  customer: selectedCustomer?.nama || editingOrder.customer,
+                  // keep existing customer for edit (not editable)
+                  customer: editingOrder.customer,
                   outlet: orderForm.outlet,
                   service: orderForm.service,
                   total: trimmedTotal,
