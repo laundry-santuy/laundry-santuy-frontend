@@ -29,7 +29,7 @@ function buildCell(value: ExcelCellValue) {
   return `<Cell><Data ss:Type="${cellType(value)}">${escapeXml(value)}</Data></Cell>`;
 }
 
-export function exportRowsToExcel<T>({
+export async function exportRowsToExcel<T>({
   fileName,
   sheetName,
   columns,
@@ -39,6 +39,44 @@ export function exportRowsToExcel<T>({
     return;
   }
 
+  // Try to use SheetJS (xlsx) when available to produce a real .xlsx file
+  try {
+    // Dynamic import so we don't force the dependency if not installed
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const XLSX = (await import('xlsx')).default || (await import('xlsx'));
+
+    const aoa: (string | number | boolean | null)[][] = [];
+    // header
+    aoa.push(columns.map((c) => String(c.header)));
+    // rows
+    for (const row of rows) {
+      aoa.push(columns.map((c) => {
+        const v = c.value(row);
+        return v === undefined ? null : (typeof v === 'number' || typeof v === 'boolean' ? v : String(v ?? ''));
+      }));
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName || 'Sheet1');
+    const wopts = { bookType: 'xlsx', type: 'array' } as any;
+    const wbout = XLSX.write(wb, wopts);
+
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${fileName}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    return;
+  } catch (e) {
+    // Fall back to old XML .xls export if xlsx lib is not available
+  }
+
+  // Fallback legacy XML-based .xls export
   const headerRow = columns
     .map((column) => buildCell(column.header))
     .join("");
@@ -67,7 +105,9 @@ export function exportRowsToExcel<T>({
  </Worksheet>
 </Workbook>`;
 
-  const blob = new Blob([workbook], {
+  // Prepend UTF-8 BOM to help Excel correctly detect UTF-8 encoded XML
+  const bom = '\uFEFF';
+  const blob = new Blob([bom, workbook], {
     type: "application/vnd.ms-excel;charset=utf-8",
   });
   const url = URL.createObjectURL(blob);

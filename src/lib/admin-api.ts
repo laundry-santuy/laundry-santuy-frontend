@@ -205,6 +205,31 @@ export function fetchDashboard(): Promise<DashboardResponse> {
   return apiClient.get<DashboardResponse>('/api/admin/dashboard');
 }
 
+// ── Manajemen Pesanan (Admin) ───────────────────────────────────────────────
+
+export type ManajemenPesananOrder = {
+  id_pesanan: string;
+  orderIdUI?: string;
+  date?: string | null;
+  customer?: { name?: string; initials?: string } | null;
+  layanan?: string | null;
+  outlet?: string | null;
+  berat?: string | null;
+  harga?: number | null;
+  status?: string | null;
+  statusAsli?: string | null;
+};
+
+export type ManajemenPesananResponse = {
+  summary: { semua: number; pending: number; processing?: number; completed?: number; cancelled?: number };
+  orders: ManajemenPesananOrder[];
+  pagination: { page: number; limit: number; totalData: number; totalPages: number };
+};
+
+export function fetchManajemenPesanan(page = 1, limit = 1000): Promise<ManajemenPesananResponse> {
+  return apiClient.get<ManajemenPesananResponse>(`/api/admin/manajemen-pesanan?page=${page}&limit=${limit}`);
+}
+
 export function fetchPengaturanOutlet(): Promise<PengaturanOutletResponse> {
   return apiClient.get<PengaturanOutletResponse>(withCacheBuster('/api/admin/pengaturan-outlet'));
 }
@@ -213,6 +238,22 @@ export function createLayanan(
   body: CreateLayananBody,
 ): Promise<{ message: string; data: { id_layanan: string } & Record<string, unknown> }> {
   return apiClient.post('/api/layanan', body);
+}
+
+export function updatePesananStatus(id: string, status: string): Promise<{ message: string; pesanan?: any }> {
+  return apiClient.patch(`/api/admin/pesanan/${id}/status`, { status });
+}
+
+export type CreatePesananAdminBody = {
+  id_layanan: string;
+  id_laundry: string;
+  harga_total?: number;
+  status?: string;
+  customerName?: string;
+};
+
+export function createPesananAdmin(body: CreatePesananAdminBody): Promise<{ message: string; pesanan?: any }> {
+  return apiClient.post('/api/admin/pesanan', body);
 }
 
 export function updateLayanan(
