@@ -195,9 +195,11 @@ export function AdminOrderManagementPage() {
     try {
       const res = await fetchPengaturanOutlet();
       const semua = res.semuaOutlet || [];
-      setOutlets(semua.map((o) => ({ id: o.id, nama: o.nama })));
+      setOutlets(
+        semua.map((o) => ({ id: o.id_outlet ?? o.id ?? String(o.namaOutlet || o.nama || Math.random()), nama: o.namaOutlet ?? o.nama }))
+      );
 
-      const layanan = (res.layananOutlet || []).map((l) => ({ id: l.id_layanan, nama: l.namaLayanan }));
+      const layanan = (res.layananOutlet || []).map((l) => ({ id: l.id_layanan ?? l.id ?? String(l.namaLayanan || l.nama || Math.random()), nama: l.namaLayanan ?? l.nama }));
       setServices(layanan);
 
       setOrderForm((cur) => ({
@@ -713,36 +715,47 @@ export function AdminOrderManagementPage() {
         title={orderModalMode === "edit" ? "Edit pesanan" : "Tambah pesanan"}
         description={
           orderModalMode === "edit"
-            ? "Perbarui customer, outlet, layanan, total, dan status pesanan."
+            ? "Perbarui outlet, layanan, total, dan status pesanan."
             : "Buat pesanan baru dengan detail yang langsung siap diproses."
         }
         size="lg"
       >
         <form className="space-y-5" onSubmit={submitOrderForm}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block space-y-2 sm:col-span-2">
-              <span className="text-sm font-extrabold text-[var(--odong-text)]">
-                Customer
-              </span>
-              <select
-                required
-                value={orderForm.customerId}
-                onChange={(event) =>
-                  setOrderForm((current) => ({
-                    ...current,
-                    customerId: event.target.value,
-                  }))
-                }
-                className={adminControlClass}
-              >
-                <option value="">Pilih customer</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.nama} - {customer.id}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {orderModalMode === "edit" ? (
+              <div className="block space-y-2 sm:col-span-2">
+                <span className="text-sm font-extrabold text-[var(--odong-text)]">
+                  Customer
+                </span>
+                <div className="rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-muted)] px-4 py-3 text-sm font-semibold text-[var(--odong-text)]">
+                  {editingOrder?.customer || "Tidak Diketahui"}
+                </div>
+              </div>
+            ) : (
+              <label className="block space-y-2 sm:col-span-2">
+                <span className="text-sm font-extrabold text-[var(--odong-text)]">
+                  Customer
+                </span>
+                <select
+                  required
+                  value={orderForm.customerId}
+                  onChange={(event) =>
+                    setOrderForm((current) => ({
+                      ...current,
+                      customerId: event.target.value,
+                    }))
+                  }
+                  className={adminControlClass}
+                >
+                  <option value="">Pilih customer</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.nama} - {customer.id}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <label className="block space-y-2">
               <span className="text-sm font-extrabold text-[var(--odong-text)]">
