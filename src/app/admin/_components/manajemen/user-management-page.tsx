@@ -102,7 +102,7 @@ function mapBackendUserToAdminUser(user: ManajemenUserItem): AdminUser {
   return {
     id: user.id,
     name: user.nama,
-    email: role === "Kurir" ? (user.nomorTelepon || "-") : user.email,
+    email: user.email,
     role,
     status: user.status === "Nonaktif" ? "Nonaktif" : "Aktif",
     joinedAt: formatDateLabel(user.tanggalGabung),
@@ -274,15 +274,12 @@ export function AdminUserManagementPage() {
 
     const trimmedName = userForm.name.trim();
     const trimmedContact = userForm.email.trim();
-    const isEditingKurir =
-      userModalMode === "edit" && editingUser?.role === "Kurir";
-    const isKurirRole = userForm.role === "Kurir";
 
     if (!trimmedName) {
       return;
     }
 
-    if (!isEditingKurir && !trimmedContact) {
+    if (!trimmedContact) {
       return;
     }
 
@@ -292,14 +289,12 @@ export function AdminUserManagementPage() {
 
       if (userModalMode === "create") {
         const createdPassword = userForm.password.trim();
-        const generatedKurirEmail = `kurir.${trimmedContact.replace(/\D/g, "") || Date.now()}@laundrysantuy.local`;
 
         await createManajemenUser({
           name: trimmedName,
-          email: isKurirRole ? generatedKurirEmail : trimmedContact,
+          email: trimmedContact,
           role: userForm.role,
           password: createdPassword,
-          nomorTelepon: isKurirRole ? trimmedContact : undefined,
         });
 
         setLastCredential({
@@ -313,7 +308,7 @@ export function AdminUserManagementPage() {
       if (userModalMode === "edit" && editingUser) {
         await updateManajemenUser(editingUser.id, {
           name: trimmedName,
-          email: editingUser.role === "Kurir" ? undefined : trimmedContact,
+          email: trimmedContact,
           role: userForm.role,
         });
         setActionSuccess("Data user berhasil diperbarui.");
@@ -721,13 +716,12 @@ export function AdminUserManagementPage() {
 
             <label className="block space-y-2">
               <span className="text-sm font-extrabold text-[var(--odong-text)]">
-                {userForm.role === "Kurir" ? "Nomor telepon" : "Email"}
+                Email
               </span>
               <input
                 required
-                type={userForm.role === "Kurir" ? "tel" : "email"}
+                type="email"
                 value={userForm.email}
-                disabled={userModalMode === "edit" && editingUser?.role === "Kurir"}
                 onChange={(event) =>
                   setUserForm((current) => ({
                     ...current,
@@ -735,17 +729,8 @@ export function AdminUserManagementPage() {
                   }))
                 }
                 className={adminControlClass}
-                placeholder={
-                  userForm.role === "Kurir"
-                    ? "Contoh: 081234567890"
-                    : "nama@laundrysantuy.id"
-                }
+                placeholder="nama@laundrysantuy.id"
               />
-              {userModalMode === "edit" && editingUser?.role === "Kurir" ? (
-                <p className="text-xs font-semibold text-[var(--odong-muted)]">
-                  Nomor telepon kurir tidak dapat diubah oleh admin.
-                </p>
-              ) : null}
             </label>
 
             <label className="block space-y-2">
@@ -864,7 +849,7 @@ export function AdminUserManagementPage() {
               <DetailItem label="ID" value={detailUser.id} />
               <DetailItem label="Nama" value={detailUser.name} />
               <DetailItem
-                label={detailUser.role === "Kurir" ? "Nomor telepon" : "Email"}
+                label="Email"
                 value={detailUser.email}
               />
               <DetailItem label="Role" value={<UserBadge role={detailUser.role} />} />
