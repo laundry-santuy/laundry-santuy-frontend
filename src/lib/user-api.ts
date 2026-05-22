@@ -88,6 +88,10 @@ export type LacakResponse = {
   petaTracking: {
     jarakKm: number;
     estimasiTibaMenit: number;
+    outletLat?: number | null;
+    outletLng?: number | null;
+    kurirLat?: number | null;
+    kurirLng?: number | null;
   } | null;
   riwayatSingkat: {
     id_pesanan: string;

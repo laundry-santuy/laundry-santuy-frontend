@@ -21,6 +21,7 @@ import {
   type LacakResponse,
 } from "@/lib/user-api";
 import { TrackingHero } from "./tracking-hero";
+import { MapView, MapViewPlaceholder } from "./map-view";
 import { TrackingOrderSwitcher } from "./tracking-order-switcher";
 import { TrackingSidePanel } from "./tracking-side-panel";
 import {
@@ -212,6 +213,19 @@ export function TrackingPage({ status: propStatus = "ready" }: TrackingPageProps
           selectedOrderId={trackingOrder.id}
           onSelectOrder={() => {}}
         />
+
+        {/* Peta pelacakan real-time */}
+        {apiData?.petaTracking?.outletLat && apiData.petaTracking.outletLng ? (
+          <MapView
+            outletLat={apiData.petaTracking.outletLat}
+            outletLng={apiData.petaTracking.outletLng}
+            outletName={trackingOrder.outlet}
+            kurirLat={apiData.petaTracking.kurirLat}
+            kurirLng={apiData.petaTracking.kurirLng}
+          />
+        ) : (
+          <MapViewPlaceholder />
+        )}
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-stretch 2xl:grid-cols-[minmax(0,1fr)_420px]">
           <div className="min-w-0">
