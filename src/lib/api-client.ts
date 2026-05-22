@@ -47,6 +47,12 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const errMsg = (body && body.error) ? String(body.error) : `HTTP ${res.status}`;
+
+    if (res.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      window.location.href = '/auth/login';
+    }
+
     throw new ApiError(res.status, errMsg);
   }
 
