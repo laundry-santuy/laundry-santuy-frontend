@@ -50,6 +50,7 @@ export type ManajemenUserItem = {
   nama: string;
   inisial?: string;
   role: string;
+  roleKey?: 'ADMIN' | 'KURIR' | 'PELANGGAN';
   email: string;
   nomorTelepon: string;
   infoLain: string;
@@ -71,6 +72,21 @@ export type ManajemenUserResponse = {
     totalData: number;
     totalPages: number;
   };
+};
+
+export type CreateManajemenUserBody = {
+  name: string;
+  email: string;
+  role: 'Admin' | 'Kurir' | 'Pelanggan';
+  password: string;
+  nomorTelepon?: string;
+};
+
+export type UpdateManajemenUserBody = {
+  name?: string;
+  email?: string;
+  role?: 'Admin' | 'Kurir' | 'Pelanggan';
+  nomorTelepon?: string;
 };
 
 export type CreateLayananBody = {
@@ -235,6 +251,18 @@ export function fetchDashboard(): Promise<DashboardResponse> {
 
 export function fetchManajemenUser(page = 1, limit = 1000): Promise<ManajemenUserResponse> {
   return apiClient.get<ManajemenUserResponse>(`/api/admin/manajemen-user?page=${page}&limit=${limit}`);
+}
+
+export function createManajemenUser(body: CreateManajemenUserBody): Promise<{ message: string }> {
+  return apiClient.post<{ message: string }>('/api/admin/manajemen-user', body);
+}
+
+export function updateManajemenUser(id: string, body: UpdateManajemenUserBody): Promise<{ message: string }> {
+  return apiClient.patch<{ message: string }>(`/api/admin/manajemen-user/${id}`, body);
+}
+
+export function deleteManajemenUser(id: string): Promise<{ message: string }> {
+  return apiClient.del<{ message: string }>(`/api/admin/manajemen-user/${id}`);
 }
 
 // ── Manajemen Pesanan (Admin) ───────────────────────────────────────────────

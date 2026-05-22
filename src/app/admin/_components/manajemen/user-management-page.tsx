@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent, ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Download,
   Eye,
@@ -18,6 +18,14 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { ApiError } from "@/lib/api-client";
+import {
+  createManajemenUser,
+  deleteManajemenUser,
+  fetchManajemenUser,
+  updateManajemenUser,
+  type ManajemenUserItem,
+} from "@/lib/admin-api";
 import { AdminDialog } from "../admin-dialog";
 import { exportRowsToExcel } from "../admin-export";
 import {
@@ -36,7 +44,6 @@ import {
   AdminIconButton,
   AdminPaginationBar,
 } from "../admin-table-tools";
-import { adminUsers } from "../data";
 import type { AdminUser, AdminUserRole, AdminUserStatus } from "../types";
 
 const PAGE_SIZE = 5;
@@ -70,61 +77,36 @@ const emptyUserForm: UserFormValues = {
   password: "",
 };
 
-const passwordPools = [
-  "ABCDEFGHJKLMNPQRSTUVWXYZ",
-  "abcdefghijkmnopqrstuvwxyz",
-  "23456789",
-  "!@#$%&*?",
-];
-
-function randomIndex(max: number) {
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
-    const values = new Uint32Array(1);
-    crypto.getRandomValues(values);
-    return values[0] % max;
+function formatDateLabel(dateInput?: string) {
+  const date = dateInput ? new Date(dateInput) : new Date();
+  if (Number.isNaN(date.getTime())) {
+    return dateInput || "-";
   }
 
-  return Math.floor(Math.random() * max);
-}
-
-function pickCharacter(pool: string) {
-  return pool[randomIndex(pool.length)];
-}
-
-function generateStrongPassword() {
-  const allCharacters = passwordPools.join("");
-  const characters = [
-    ...passwordPools.map((pool) => pickCharacter(pool)),
-    ...Array.from({ length: 10 }, () => pickCharacter(allCharacters)),
-  ];
-
-  for (let index = characters.length - 1; index > 0; index -= 1) {
-    const swapIndex = randomIndex(index + 1);
-    [characters[index], characters[swapIndex]] = [
-      characters[swapIndex],
-      characters[index],
-    ];
-  }
-
-  return characters.join("");
-}
-
-function formatDateLabel() {
   return new Intl.DateTimeFormat("id-ID", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date());
+  }).format(date);
 }
 
-function createNextUserId(users: AdminUser[]) {
-  const nextNumber =
-    Math.max(
-      0,
-      ...users.map((user) => Number(user.id.match(/(\d+)$/)?.[1] ?? 0)),
-    ) + 1;
+function mapRoleToAdminRole(role?: string): AdminUserRole {
+  const normalized = (role || "").toLowerCase();
+  if (normalized.includes("admin")) return "Admin";
+  if (normalized.includes("kurir")) return "Kurir";
+  return "Pelanggan";
+}
 
-  return `USR-${String(nextNumber).padStart(3, "0")}`;
+function mapBackendUserToAdminUser(user: ManajemenUserItem): AdminUser {
+  const role = mapRoleToAdminRole(user.roleKey || user.role);
+  return {
+    id: user.id,
+    name: user.nama,
+    email: role === "Kurir" ? (user.nomorTelepon || "-") : user.email,
+    role,
+    status: user.status === "Nonaktif" ? "Nonaktif" : "Aktif",
+    joinedAt: formatDateLabel(user.tanggalGabung),
+  };
 }
 
 function UserBadge({ role }: { role: AdminUserRole }) {
@@ -176,13 +158,16 @@ function DetailItem({ label, value }: { label: string; value: ReactNode }) {
 }
 
 export function AdminUserManagementPage() {
-  const [users, setUsers] = useState<AdminUser[]>(adminUsers);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] =
     useState<(typeof roleOptions)[number]>("Semua");
   const [statusFilter, setStatusFilter] =
     useState<(typeof statusOptions)[number]>("Semua");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [userModalMode, setUserModalMode] =
     useState<"create" | "edit" | null>(null);
@@ -195,14 +180,23 @@ export function AdminUserManagementPage() {
     password: string;
   } | null>(null);
   const [credentialCopied, setCredentialCopied] = useState(false);
-  const timerRef = useRef<number | null>(null);
+
+  const loadUsers = async () => {
+    try {
+      setIsLoading(true);
+      setLoadError(null);
+      const response = await fetchManajemenUser(1, 1000);
+      setUsers((response.users || []).map(mapBackendUserToAdminUser));
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Gagal memuat data user.";
+      setLoadError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        window.clearTimeout(timerRef.current);
-      }
-    };
+    loadUsers();
   }, []);
 
   const filteredUsers = useMemo(() => {
@@ -238,23 +232,18 @@ export function AdminUserManagementPage() {
     courier: users.filter((user) => user.role === "Kurir").length,
   };
 
-  const refreshUsers = () => {
-    if (timerRef.current) {
-      window.clearTimeout(timerRef.current);
-    }
-
-    setIsLoading(true);
-    timerRef.current = window.setTimeout(() => {
-      setIsLoading(false);
-    }, 650);
+  const refreshUsers = async () => {
+    await loadUsers();
   };
 
   const openCreateUser = () => {
     setEditingUser(null);
     setCredentialCopied(false);
+    setActionError(null);
+    setActionSuccess(null);
     setUserForm({
       ...emptyUserForm,
-      password: generateStrongPassword(),
+      password: "",
     });
     setUserModalMode("create");
   };
@@ -262,6 +251,8 @@ export function AdminUserManagementPage() {
   const openEditUser = (user: AdminUser) => {
     setEditingUser(user);
     setCredentialCopied(false);
+    setActionError(null);
+    setActionSuccess(null);
     setUserForm({
       name: user.name,
       email: user.email,
@@ -278,69 +269,84 @@ export function AdminUserManagementPage() {
     setUserForm(emptyUserForm);
   };
 
-  const submitUserForm = (event: FormEvent<HTMLFormElement>) => {
+  const submitUserForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const trimmedName = userForm.name.trim();
-    const trimmedEmail = userForm.email.trim();
+    const trimmedContact = userForm.email.trim();
+    const isEditingKurir =
+      userModalMode === "edit" && editingUser?.role === "Kurir";
+    const isKurirRole = userForm.role === "Kurir";
 
-    if (!trimmedName || !trimmedEmail) {
+    if (!trimmedName) {
       return;
     }
 
-    if (userModalMode === "create") {
-      const createdPassword = userForm.password || generateStrongPassword();
+    if (!isEditingKurir && !trimmedContact) {
+      return;
+    }
 
-      setUsers((currentUsers) => [
-        {
-          id: createNextUserId(currentUsers),
+    try {
+      setActionError(null);
+      setActionSuccess(null);
+
+      if (userModalMode === "create") {
+        const createdPassword = userForm.password.trim();
+        const generatedKurirEmail = `kurir.${trimmedContact.replace(/\D/g, "") || Date.now()}@laundrysantuy.local`;
+
+        await createManajemenUser({
           name: trimmedName,
-          email: trimmedEmail,
+          email: isKurirRole ? generatedKurirEmail : trimmedContact,
           role: userForm.role,
-          status: userForm.status,
-          joinedAt: formatDateLabel(),
-        },
-        ...currentUsers,
-      ]);
-      setLastCredential({
-        email: trimmedEmail,
-        password: createdPassword,
-      });
-      setPage(1);
-    }
+          password: createdPassword,
+          nomorTelepon: isKurirRole ? trimmedContact : undefined,
+        });
 
-    if (userModalMode === "edit" && editingUser) {
-      setUsers((currentUsers) =>
-        currentUsers.map((user) =>
-          user.id === editingUser.id
-            ? {
-                ...user,
-                name: trimmedName,
-                email: trimmedEmail,
-                role: userForm.role,
-                status: userForm.status,
-              }
-            : user,
-        ),
-      );
-    }
+        setLastCredential({
+          email: trimmedContact,
+          password: createdPassword,
+        });
+        setActionSuccess("User baru berhasil ditambahkan.");
+        setPage(1);
+      }
 
-    closeUserForm();
+      if (userModalMode === "edit" && editingUser) {
+        await updateManajemenUser(editingUser.id, {
+          name: trimmedName,
+          email: editingUser.role === "Kurir" ? undefined : trimmedContact,
+          role: userForm.role,
+        });
+        setActionSuccess("Data user berhasil diperbarui.");
+      }
+
+      closeUserForm();
+      await loadUsers();
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Gagal menyimpan data user.";
+      setActionError(message);
+    }
   };
 
-  const confirmDeleteUser = () => {
+  const confirmDeleteUser = async () => {
     if (!deleteUser) {
       return;
     }
 
-    setUsers((currentUsers) =>
-      currentUsers.filter((user) => user.id !== deleteUser.id),
-    );
-    setDetailUser((currentUser) =>
-      currentUser?.id === deleteUser.id ? null : currentUser,
-    );
-    setDeleteUser(null);
-    setPage(1);
+    try {
+      setActionError(null);
+      setActionSuccess(null);
+      await deleteManajemenUser(deleteUser.id);
+      setDetailUser((currentUser) =>
+        currentUser?.id === deleteUser.id ? null : currentUser,
+      );
+      setDeleteUser(null);
+      setPage(1);
+      setActionSuccess("User berhasil dihapus.");
+      await loadUsers();
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Gagal menghapus user.";
+      setActionError(message);
+    }
   };
 
   const copyPassword = async (password: string) => {
@@ -493,6 +499,18 @@ export function AdminUserManagementPage() {
           </label>
         </div>
 
+        {actionError ? (
+          <div className="mt-4 rounded-[20px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+            {actionError}
+          </div>
+        ) : null}
+
+        {actionSuccess ? (
+          <div className="mt-4 rounded-[20px] border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+            {actionSuccess}
+          </div>
+        ) : null}
+
         {lastCredential ? (
           <div
             role="status"
@@ -531,6 +549,11 @@ export function AdminUserManagementPage() {
         <div className="mt-5">
           {isLoading ? (
             <AdminLoadingState />
+          ) : loadError ? (
+            <AdminEmptyState
+              title="Gagal memuat user"
+              description={loadError}
+            />
           ) : filteredUsers.length === 0 ? (
             <AdminEmptyState
               title="User tidak ditemukan"
@@ -698,12 +721,13 @@ export function AdminUserManagementPage() {
 
             <label className="block space-y-2">
               <span className="text-sm font-extrabold text-[var(--odong-text)]">
-                Email
+                {userForm.role === "Kurir" ? "Nomor telepon" : "Email"}
               </span>
               <input
                 required
-                type="email"
+                type={userForm.role === "Kurir" ? "tel" : "email"}
                 value={userForm.email}
+                disabled={userModalMode === "edit" && editingUser?.role === "Kurir"}
                 onChange={(event) =>
                   setUserForm((current) => ({
                     ...current,
@@ -711,8 +735,17 @@ export function AdminUserManagementPage() {
                   }))
                 }
                 className={adminControlClass}
-                placeholder="nama@laundrysantuy.id"
+                placeholder={
+                  userForm.role === "Kurir"
+                    ? "Contoh: 081234567890"
+                    : "nama@laundrysantuy.id"
+                }
               />
+              {userModalMode === "edit" && editingUser?.role === "Kurir" ? (
+                <p className="text-xs font-semibold text-[var(--odong-muted)]">
+                  Nomor telepon kurir tidak dapat diubah oleh admin.
+                </p>
+              ) : null}
             </label>
 
             <label className="block space-y-2">
@@ -774,37 +807,31 @@ export function AdminUserManagementPage() {
                 </span>
                 <div className="min-w-0">
                   <p className="text-sm font-extrabold text-[var(--odong-text)]">
-                    Password awal
+                    Password
                   </p>
                   <p className="mt-1 text-sm leading-6 text-[var(--odong-muted)]">
-                    Password dibuat otomatis dengan kombinasi huruf besar, huruf
-                    kecil, angka, dan simbol.
+                    Isi password sendiri untuk akun baru.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <label className="min-w-0 flex-1">
-                  <span className="sr-only">Password awal</span>
+              <div className="mt-4">
+                <label className="block space-y-2">
+                  <span className="sr-only">Password</span>
                   <input
-                    readOnly
+                    required
+                    type="password"
                     value={userForm.password}
-                    className={cn(adminControlClass, "font-mono")}
+                    onChange={(event) =>
+                      setUserForm((current) => ({
+                        ...current,
+                        password: event.target.value,
+                      }))
+                    }
+                    className={adminControlClass}
+                    placeholder="Masukkan password"
                   />
                 </label>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setUserForm((current) => ({
-                      ...current,
-                      password: generateStrongPassword(),
-                    }))
-                  }
-                  className={adminSecondaryButtonClass}
-                >
-                  <RefreshCcw className="h-4 w-4" aria-hidden="true" />
-                  Generate
-                </button>
               </div>
             </div>
           ) : null}
@@ -836,7 +863,10 @@ export function AdminUserManagementPage() {
             <div className="grid gap-3">
               <DetailItem label="ID" value={detailUser.id} />
               <DetailItem label="Nama" value={detailUser.name} />
-              <DetailItem label="Email" value={detailUser.email} />
+              <DetailItem
+                label={detailUser.role === "Kurir" ? "Nomor telepon" : "Email"}
+                value={detailUser.email}
+              />
               <DetailItem label="Role" value={<UserBadge role={detailUser.role} />} />
               <DetailItem
                 label="Status"
