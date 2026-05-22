@@ -35,7 +35,7 @@ import {
   AdminIconButton,
   AdminPaginationBar,
 } from "../admin-table-tools";
-import { adminOrders } from "../data";
+import { fetchManajemenPesanan, fetchPengaturanOutlet } from "@/lib/admin-api";
 import type { AdminOrder, AdminOrderStatus } from "../types";
 
 const PAGE_SIZE = 5;
@@ -62,36 +62,20 @@ const statusToneClass: Record<AdminOrderStatus, string> = {
   Cancelled: "bg-[var(--odong-surface-muted)] text-[var(--odong-muted)]",
 };
 
-const outletOptions = [
-  "Outlet Sudirman",
-  "Outlet Kemang",
-  "Outlet Senopati",
-  "Outlet Menteng",
-  "Outlet Gatot Subroto",
-  "Outlet Tebet",
-] as const;
-
-const serviceOptions = [
-  "Cuci Kering Setrika",
-  "Cuci Lipat",
-  "Express Wash",
-  "Bedding Care",
-  "Cuci Setrika",
-  "Sepatu Care",
-] as const;
+// outlet and service options are loaded from API at runtime
 
 type OrderFormValues = {
   customer: string;
-  outlet: (typeof outletOptions)[number];
-  service: (typeof serviceOptions)[number];
+  outlet: string;
+  service: string;
   total: string;
   status: AdminOrderStatus;
 };
 
 const emptyOrderForm: OrderFormValues = {
   customer: "",
-  outlet: outletOptions[0],
-  service: serviceOptions[0],
+  outlet: "",
+  service: "",
   total: "Rp ",
   status: "Pending",
 };
@@ -151,7 +135,9 @@ function DetailItem({ label, value }: { label: string; value: ReactNode }) {
 }
 
 export function AdminOrderManagementPage() {
-  const [orders, setOrders] = useState<AdminOrder[]>(adminOrders);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [outlets, setOutlets] = useState<{ id: string; nama: string }[]>([]);
+  const [services, setServices] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<(typeof statusOptions)[number]>("Semua");
@@ -172,6 +158,65 @@ export function AdminOrderManagementPage() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    // Load orders and outlet/service options once on mount
+    loadOrders();
+    loadOutletAndServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function loadOutletAndServices() {
+    try {
+      const res = await fetchPengaturanOutlet();
+      const semua = res.semuaOutlet || [];
+      setOutlets(semua.map((o) => ({ id: o.id, nama: o.nama })));
+
+      const layanan = (res.layananOutlet || []).map((l) => l.namaLayanan || l.id_layanan || "");
+      setServices(layanan);
+
+      setOrderForm((cur) => ({
+        ...cur,
+        outlet: cur.outlet || (semua[0]?.id ?? ""),
+        service: cur.service || (layanan[0] ?? ""),
+      }));
+    } catch (err) {
+      console.error("Failed to load outlets/services:", err);
+    }
+  }
+
+  async function loadOrders() {
+    try {
+      setIsLoading(true);
+      const res = await fetchManajemenPesanan(1, 1000);
+      const mapped: AdminOrder[] = (res.orders || []).map((o) => {
+        const rawStatus = (o.status || o.statusAsli || '').toString().toLowerCase();
+        let status: AdminOrderStatus = 'Pending';
+        if (rawStatus.includes('selesai') || rawStatus.includes('completed')) status = 'Completed';
+        else if (rawStatus.includes('proses') || rawStatus.includes('sedang')) status = 'Processing';
+        else if (rawStatus.includes('batal') || rawStatus.includes('dibatalkan') || rawStatus.includes('cancel')) status = 'Cancelled';
+        else status = 'Pending';
+
+        const dateLabel = o.date ? new Date(o.date).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+
+        return {
+          id: o.id_pesanan,
+          customer: o.customer?.name || 'Tidak Diketahui',
+          outlet: o.outlet || '-',
+          service: o.layanan || '-',
+          total: o.harga ? `Rp ${o.harga.toLocaleString('id-ID')}` : 'Rp 0',
+          status,
+          createdAt: dateLabel,
+        } as AdminOrder;
+      });
+
+      setOrders(mapped);
+    } catch (err) {
+      console.error('Failed to load manajemen pesanan:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   const filteredOrders = useMemo(() => {
     const normalizedQuery = query.toLowerCase();
@@ -210,22 +255,20 @@ export function AdminOrderManagementPage() {
       window.clearTimeout(timerRef.current);
     }
 
-    setIsLoading(true);
-    timerRef.current = window.setTimeout(() => {
-      setIsLoading(false);
-    }, 650);
+    // trigger reload from API
+    loadOrders();
   };
 
   const openCreateOrder = () => {
     setEditingOrder(null);
-    setOrderForm({
+    setOrderForm((cur) => ({
       ...emptyOrderForm,
       total: "Rp ",
       customer: "",
-      outlet: outletOptions[0],
-      service: serviceOptions[0],
+      outlet: cur.outlet || outlets[0]?.id || "",
+      service: cur.service || services[0] || "",
       status: "Pending",
-    });
+    }));
     setOrderModalMode("create");
   };
 
@@ -233,8 +276,8 @@ export function AdminOrderManagementPage() {
     setEditingOrder(order);
     setOrderForm({
       customer: order.customer,
-      outlet: order.outlet as OrderFormValues["outlet"],
-      service: order.service as OrderFormValues["service"],
+      outlet: order.outlet as string,
+      service: order.service as string,
       total: order.total,
       status: order.status,
     });
@@ -642,16 +685,20 @@ export function AdminOrderManagementPage() {
                 onChange={(event) =>
                   setOrderForm((current) => ({
                     ...current,
-                    outlet: event.target.value as OrderFormValues["outlet"],
+                    outlet: event.target.value,
                   }))
                 }
                 className={adminSelectClass}
               >
-                {outletOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
+                {outlets.length > 0 ? (
+                  outlets.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.nama}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">Pilih outlet</option>
+                )}
               </select>
             </label>
 
@@ -664,16 +711,20 @@ export function AdminOrderManagementPage() {
                 onChange={(event) =>
                   setOrderForm((current) => ({
                     ...current,
-                    service: event.target.value as OrderFormValues["service"],
+                    service: event.target.value,
                   }))
                 }
                 className={adminSelectClass}
               >
-                {serviceOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
+                {services.length > 0 ? (
+                  services.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">Pilih layanan</option>
+                )}
               </select>
             </label>
 

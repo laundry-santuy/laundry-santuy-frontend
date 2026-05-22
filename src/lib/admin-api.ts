@@ -194,6 +194,31 @@ export function fetchDashboard(): Promise<DashboardResponse> {
   return apiClient.get<DashboardResponse>('/api/admin/dashboard');
 }
 
+// ── Manajemen Pesanan (Admin) ───────────────────────────────────────────────
+
+export type ManajemenPesananOrder = {
+  id_pesanan: string;
+  orderIdUI?: string;
+  date?: string | null;
+  customer?: { name?: string; initials?: string } | null;
+  layanan?: string | null;
+  outlet?: string | null;
+  berat?: string | null;
+  harga?: number | null;
+  status?: string | null;
+  statusAsli?: string | null;
+};
+
+export type ManajemenPesananResponse = {
+  summary: { semua: number; pending: number; processing?: number; completed?: number; cancelled?: number };
+  orders: ManajemenPesananOrder[];
+  pagination: { page: number; limit: number; totalData: number; totalPages: number };
+};
+
+export function fetchManajemenPesanan(page = 1, limit = 1000): Promise<ManajemenPesananResponse> {
+  return apiClient.get<ManajemenPesananResponse>(`/api/admin/manajemen-pesanan?page=${page}&limit=${limit}`);
+}
+
 export function fetchPengaturanOutlet(): Promise<PengaturanOutletResponse> {
   return apiClient.get<PengaturanOutletResponse>('/api/admin/pengaturan-outlet');
 }
