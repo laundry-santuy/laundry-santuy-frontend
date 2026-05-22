@@ -220,8 +220,10 @@ export function TrackingPage({ status: propStatus = "ready" }: TrackingPageProps
             outletLat={apiData.petaTracking.outletLat}
             outletLng={apiData.petaTracking.outletLng}
             outletName={trackingOrder.outlet}
-            kurirLat={apiData.petaTracking.kurirLat}
-            kurirLng={apiData.petaTracking.kurirLng}
+            userLat={apiData.petaTracking.userLat}
+            userLng={apiData.petaTracking.userLng}
+            driverLat={apiData.petaTracking.kurirLat}
+            driverLng={apiData.petaTracking.kurirLng}
           />
         ) : (
           <MapViewPlaceholder />

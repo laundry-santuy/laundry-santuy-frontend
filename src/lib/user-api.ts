@@ -92,6 +92,8 @@ export type LacakResponse = {
     outletLng?: number | null;
     kurirLat?: number | null;
     kurirLng?: number | null;
+    userLat?: number | null;
+    userLng?: number | null;
   } | null;
   riwayatSingkat: {
     id_pesanan: string;
