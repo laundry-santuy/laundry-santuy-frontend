@@ -35,7 +35,7 @@ import {
   AdminIconButton,
   AdminPaginationBar,
 } from "../admin-table-tools";
-import { fetchManajemenPesanan, fetchPengaturanOutlet, updatePesananStatus, createPesananAdmin } from "@/lib/admin-api";
+import { fetchManajemenPesanan, fetchPengaturanOutlet, fetchManajemenUser, updatePesananStatus, createPesananAdmin } from "@/lib/admin-api";
 import type { AdminOrder, AdminOrderStatus } from "../types";
 
 const PAGE_SIZE = 5;
@@ -68,7 +68,7 @@ const statusToneClass: Record<AdminOrderStatus, string> = {
 // outlet and service options are loaded from API at runtime
 
 type OrderFormValues = {
-  customer: string;
+  customerId: string;
   outlet: string;
   service: string;
   total: string;
@@ -76,7 +76,7 @@ type OrderFormValues = {
 };
 
 const emptyOrderForm: OrderFormValues = {
-  customer: "",
+  customerId: "",
   outlet: "",
   service: "",
   total: "Rp ",
@@ -139,6 +139,7 @@ function DetailItem({ label, value }: { label: string; value: ReactNode }) {
 
 export function AdminOrderManagementPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [customers, setCustomers] = useState<{ id: string; nama: string; email: string }[]>([]);
   const [outlets, setOutlets] = useState<{ id: string; nama: string }[]>([]);
   const [services, setServices] = useState<{ id: string; nama: string }[]>([]);
   const [query, setQuery] = useState("");
@@ -165,9 +166,30 @@ export function AdminOrderManagementPage() {
   useEffect(() => {
     // Load orders and outlet/service options once on mount
     loadOrders();
+    loadCustomers();
     loadOutletAndServices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function loadCustomers() {
+    try {
+      const res = await fetchManajemenUser(1, 1000);
+      const pelanggan = (res.users || [])
+        .filter((user) => (user.role || '').toLowerCase() === 'user' || (user.role || '').toLowerCase() === 'pelanggan')
+        .map((user) => ({
+          id: user.id,
+          nama: user.nama,
+          email: user.email,
+        }));
+      setCustomers(pelanggan);
+      setOrderForm((cur) => ({
+        ...cur,
+        customerId: cur.customerId || (pelanggan[0]?.id ?? ''),
+      }));
+    } catch (err) {
+      console.error('Failed to load customers:', err);
+    }
+  }
 
   async function loadOutletAndServices() {
     try {
@@ -268,9 +290,9 @@ export function AdminOrderManagementPage() {
     setOrderForm((cur) => ({
       ...emptyOrderForm,
       total: "Rp ",
-      customer: "",
+      customerId: cur.customerId || customers[0]?.id || "",
       outlet: cur.outlet || outlets[0]?.id || "",
-      service: cur.service || services[0] || "",
+      service: cur.service || services[0]?.id || "",
       status: "Pending",
     }));
     setOrderModalMode("create");
@@ -279,7 +301,7 @@ export function AdminOrderManagementPage() {
   const openEditOrder = (order: AdminOrder) => {
     setEditingOrder(order);
     setOrderForm({
-      customer: order.customer,
+      customerId: "",
       outlet: order.outlet as string,
       service: order.service as string,
       total: order.total,
@@ -297,10 +319,14 @@ export function AdminOrderManagementPage() {
   const submitOrderForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const trimmedCustomer = orderForm.customer.trim();
+    const selectedCustomer = customers.find((customer) => customer.id === orderForm.customerId);
     const trimmedTotal = orderForm.total.trim();
 
-    if (!trimmedCustomer || !trimmedTotal) {
+    if (!trimmedTotal) {
+      return;
+    }
+
+    if (orderModalMode === "create" && !selectedCustomer) {
       return;
     }
 
@@ -313,14 +339,14 @@ export function AdminOrderManagementPage() {
           id_laundry: orderForm.outlet,
           harga_total: hargaParsed,
           status: orderForm.status,
-          customerName: trimmedCustomer,
+          id_pengguna: selectedCustomer.id,
         };
         const res = await createPesananAdmin(payload as any);
         const created = res.pesanan;
         if (created) {
           const mapped: AdminOrder = {
             id: created.id_pesanan || createNextOrderId([]),
-            customer: created.customer?.nama || trimmedCustomer,
+            customer: created.customer?.nama || selectedCustomer?.nama || "Tidak Diketahui",
             outlet: created.outlet?.nama || orderForm.outlet,
             service: created.layanan?.nama || orderForm.service,
             total: `Rp ${Number(created.totalEstimasi || hargaParsed).toLocaleString('id-ID')}`,
@@ -358,7 +384,7 @@ export function AdminOrderManagementPage() {
             order.id === editingOrder.id
               ? {
                   ...order,
-                  customer: trimmedCustomer,
+                  customer: selectedCustomer?.nama || editingOrder.customer,
                   outlet: orderForm.outlet,
                   service: orderForm.service,
                   total: trimmedTotal,
@@ -698,18 +724,24 @@ export function AdminOrderManagementPage() {
               <span className="text-sm font-extrabold text-[var(--odong-text)]">
                 Customer
               </span>
-              <input
+              <select
                 required
-                value={orderForm.customer}
+                value={orderForm.customerId}
                 onChange={(event) =>
                   setOrderForm((current) => ({
                     ...current,
-                    customer: event.target.value,
+                    customerId: event.target.value,
                   }))
                 }
                 className={adminControlClass}
-                placeholder="Contoh: Dinda Maharani"
-              />
+              >
+                <option value="">Pilih customer</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.nama} - {customer.id}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="block space-y-2">

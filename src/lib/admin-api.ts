@@ -45,6 +45,34 @@ export type PengaturanOutletResponse = {
   layananOutlet: LayananBackend[];
 };
 
+export type ManajemenUserItem = {
+  id: string;
+  nama: string;
+  inisial?: string;
+  role: string;
+  email: string;
+  nomorTelepon: string;
+  infoLain: string;
+  tanggalGabung: string;
+  status: string;
+};
+
+export type ManajemenUserResponse = {
+  summary: {
+    semua: number;
+    pelanggan: number;
+    admin: number;
+    kurir: number;
+  };
+  users: ManajemenUserItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalData: number;
+    totalPages: number;
+  };
+};
+
 export type CreateLayananBody = {
   nama_layanan: string;
   satuan: 'kg' | 'item';
@@ -205,6 +233,10 @@ export function fetchDashboard(): Promise<DashboardResponse> {
   return apiClient.get<DashboardResponse>('/api/admin/dashboard');
 }
 
+export function fetchManajemenUser(page = 1, limit = 1000): Promise<ManajemenUserResponse> {
+  return apiClient.get<ManajemenUserResponse>(`/api/admin/manajemen-user?page=${page}&limit=${limit}`);
+}
+
 // ── Manajemen Pesanan (Admin) ───────────────────────────────────────────────
 
 export type ManajemenPesananOrder = {
@@ -245,11 +277,11 @@ export function updatePesananStatus(id: string, status: string): Promise<{ messa
 }
 
 export type CreatePesananAdminBody = {
+  id_pengguna: string;
   id_layanan: string;
   id_laundry: string;
   harga_total?: number;
   status?: string;
-  customerName?: string;
 };
 
 export function createPesananAdmin(body: CreatePesananAdminBody): Promise<{ message: string; pesanan?: any }> {
