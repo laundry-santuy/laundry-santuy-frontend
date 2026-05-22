@@ -35,7 +35,7 @@ import {
   AdminIconButton,
   AdminPaginationBar,
 } from "../admin-table-tools";
-import { fetchManajemenPesanan, fetchPengaturanOutlet, updatePesananStatus } from "@/lib/admin-api";
+import { fetchManajemenPesanan, fetchPengaturanOutlet, updatePesananStatus, createPesananAdmin } from "@/lib/admin-api";
 import type { AdminOrder, AdminOrderStatus } from "../types";
 
 const PAGE_SIZE = 5;
@@ -140,7 +140,7 @@ function DetailItem({ label, value }: { label: string; value: ReactNode }) {
 export function AdminOrderManagementPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [outlets, setOutlets] = useState<{ id: string; nama: string }[]>([]);
-  const [services, setServices] = useState<string[]>([]);
+  const [services, setServices] = useState<{ id: string; nama: string }[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<(typeof statusOptions)[number]>("Semua");
@@ -175,13 +175,13 @@ export function AdminOrderManagementPage() {
       const semua = res.semuaOutlet || [];
       setOutlets(semua.map((o) => ({ id: o.id, nama: o.nama })));
 
-      const layanan = (res.layananOutlet || []).map((l) => l.namaLayanan || l.id_layanan || "");
+      const layanan = (res.layananOutlet || []).map((l) => ({ id: l.id_layanan, nama: l.namaLayanan }));
       setServices(layanan);
 
       setOrderForm((cur) => ({
         ...cur,
         outlet: cur.outlet || (semua[0]?.id ?? ""),
-        service: cur.service || (layanan[0] ?? ""),
+        service: cur.service || (layanan[0]?.id ?? ""),
       }));
     } catch (err) {
       console.error("Failed to load outlets/services:", err);
@@ -305,18 +305,34 @@ export function AdminOrderManagementPage() {
     }
 
     if (orderModalMode === "create") {
-      setOrders((currentOrders) => [
-        {
-          id: createNextOrderId(currentOrders),
-          customer: trimmedCustomer,
-          outlet: orderForm.outlet,
-          service: orderForm.service,
-          total: trimmedTotal,
+      // call backend to create pesanan via admin API
+      try {
+        const hargaParsed = Number(String(trimmedTotal).replace(/[^0-9]/g, '')) || 0;
+        const payload = {
+          id_layanan: orderForm.service,
+          id_laundry: orderForm.outlet,
+          harga_total: hargaParsed,
           status: orderForm.status,
-          createdAt: formatDateTimeLabel(),
-        },
-        ...currentOrders,
-      ]);
+          customerName: trimmedCustomer,
+        };
+        const res = await createPesananAdmin(payload as any);
+        const created = res.pesanan;
+        if (created) {
+          const mapped: AdminOrder = {
+            id: created.id_pesanan || createNextOrderId([]),
+            customer: created.customer?.nama || trimmedCustomer,
+            outlet: created.outlet?.nama || orderForm.outlet,
+            service: created.layanan?.nama || orderForm.service,
+            total: `Rp ${Number(created.totalEstimasi || hargaParsed).toLocaleString('id-ID')}`,
+            status: (created.status || 'menunggu').toString().toLowerCase().includes('siap') ? 'ReadyForDelivery' : (created.status || 'menunggu').toString().toLowerCase().includes('selesai') ? 'Completed' : 'Pending',
+            createdAt: created.waktuPesanan || formatDateTimeLabel(),
+          };
+          setOrders((currentOrders) => [mapped, ...currentOrders]);
+        }
+      } catch (err) {
+        console.error('Failed to create pesanan via admin API:', err);
+        alert('Gagal membuat pesanan: ' + (err as any)?.message || 'Server error');
+      }
       setPage(1);
     }
 
@@ -738,8 +754,8 @@ export function AdminOrderManagementPage() {
               >
                 {services.length > 0 ? (
                   services.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
+                    <option key={s.id} value={s.id}>
+                      {s.nama}
                     </option>
                   ))
                 ) : (

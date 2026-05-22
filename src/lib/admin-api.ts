@@ -233,6 +233,18 @@ export function updatePesananStatus(id: string, status: string): Promise<{ messa
   return apiClient.patch(`/api/admin/pesanan/${id}/status`, { status });
 }
 
+export type CreatePesananAdminBody = {
+  id_layanan: string;
+  id_laundry: string;
+  harga_total?: number;
+  status?: string;
+  customerName?: string;
+};
+
+export function createPesananAdmin(body: CreatePesananAdminBody): Promise<{ message: string; pesanan?: any }> {
+  return apiClient.post('/api/admin/pesanan', body);
+}
+
 export function updateLayanan(
   id: string,
   body: UpdateLayananBody,
