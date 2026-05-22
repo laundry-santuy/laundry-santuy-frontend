@@ -51,6 +51,7 @@ type ServiceDraft = {
   step: string;
   iconKey: OutletServiceIconKey;
   active: boolean;
+  applyToAll?: boolean;
 };
 
 function emptyDraft(): ServiceDraft {
@@ -66,6 +67,7 @@ function emptyDraft(): ServiceDraft {
     step: "0.5",
     iconKey: "shirt",
     active: true,
+    applyToAll: false,
   };
 }
 
@@ -421,6 +423,11 @@ export function OutletServicesPanel() {
           ),
         );
       } else {
+        // include apply_to_all flag when creating
+        if (draft.applyToAll) {
+          // @ts-ignore - server accepts apply_to_all flag
+          body.apply_to_all = true;
+        }
         const result = await createLayanan(body);
         const newId = result.data.id_layanan;
         const newService: LayananBackend = {
@@ -738,6 +745,13 @@ export function OutletServicesPanel() {
               description="Layanan aktif akan tampil di halaman user."
               checked={draft.active}
               onChange={(v) => setDraft((d) => ({ ...d, active: v }))}
+              className="md:col-span-2"
+            />
+            <SwitchField
+              label="Terapkan ke semua outlet"
+              description="Buat layanan ini tersedia di semua outlet yang dimiliki admin ini."
+              checked={draft.applyToAll ?? false}
+              onChange={(v) => setDraft((d) => ({ ...d, applyToAll: v }))}
               className="md:col-span-2"
             />
           </div>
