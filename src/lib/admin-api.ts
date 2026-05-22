@@ -229,6 +229,10 @@ export function createLayanan(
   return apiClient.post('/api/layanan', body);
 }
 
+export function updatePesananStatus(id: string, status: string): Promise<{ message: string; pesanan?: any }> {
+  return apiClient.patch(`/api/admin/pesanan/${id}/status`, { status });
+}
+
 export function updateLayanan(
   id: string,
   body: UpdateLayananBody,

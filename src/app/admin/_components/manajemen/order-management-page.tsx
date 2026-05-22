@@ -35,7 +35,7 @@ import {
   AdminIconButton,
   AdminPaginationBar,
 } from "../admin-table-tools";
-import { fetchManajemenPesanan, fetchPengaturanOutlet } from "@/lib/admin-api";
+import { fetchManajemenPesanan, fetchPengaturanOutlet, updatePesananStatus } from "@/lib/admin-api";
 import type { AdminOrder, AdminOrderStatus } from "../types";
 
 const PAGE_SIZE = 5;
@@ -44,6 +44,7 @@ const statusOptions: Array<AdminOrderStatus | "Semua"> = [
   "Semua",
   "Pending",
   "Processing",
+  "ReadyForDelivery",
   "Completed",
   "Cancelled",
 ];
@@ -51,6 +52,7 @@ const statusOptions: Array<AdminOrderStatus | "Semua"> = [
 const statusLabel: Record<AdminOrderStatus, string> = {
   Pending: "Menunggu",
   Processing: "Diproses",
+  ReadyForDelivery: "Siap Diantar",
   Completed: "Selesai",
   Cancelled: "Dibatalkan",
 };
@@ -58,6 +60,7 @@ const statusLabel: Record<AdminOrderStatus, string> = {
 const statusToneClass: Record<AdminOrderStatus, string> = {
   Pending: "bg-rose-50 text-rose-600",
   Processing: "bg-amber-50 text-amber-600",
+  ReadyForDelivery: "bg-amber-50 text-amber-600",
   Completed: "bg-emerald-50 text-emerald-600",
   Cancelled: "bg-[var(--odong-surface-muted)] text-[var(--odong-muted)]",
 };
@@ -193,6 +196,7 @@ export function AdminOrderManagementPage() {
         const rawStatus = (o.status || o.statusAsli || '').toString().toLowerCase();
         let status: AdminOrderStatus = 'Pending';
         if (rawStatus.includes('selesai') || rawStatus.includes('completed')) status = 'Completed';
+        else if (rawStatus.includes('siap')) status = 'ReadyForDelivery';
         else if (rawStatus.includes('proses') || rawStatus.includes('sedang')) status = 'Processing';
         else if (rawStatus.includes('batal') || rawStatus.includes('dibatalkan') || rawStatus.includes('cancel')) status = 'Cancelled';
         else status = 'Pending';
@@ -290,7 +294,7 @@ export function AdminOrderManagementPage() {
     setOrderForm(emptyOrderForm);
   };
 
-  const submitOrderForm = (event: FormEvent<HTMLFormElement>) => {
+  const submitOrderForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const trimmedCustomer = orderForm.customer.trim();
@@ -317,20 +321,36 @@ export function AdminOrderManagementPage() {
     }
 
     if (orderModalMode === "edit" && editingOrder) {
-      setOrders((currentOrders) =>
-        currentOrders.map((order) =>
-          order.id === editingOrder.id
-            ? {
-                ...order,
-                customer: trimmedCustomer,
-                outlet: orderForm.outlet,
-                service: orderForm.service,
-                total: trimmedTotal,
-                status: orderForm.status,
-              }
-            : order,
-        ),
-      );
+        const newStatus = orderForm.status;
+        // If status changed to ReadyForDelivery, call backend to persist
+        if (newStatus === "ReadyForDelivery" && editingOrder.id) {
+          try {
+            // backend expects 'siap_diantar'
+            await updatePesananStatus(editingOrder.id, "siap_diantar");
+          } catch (err: any) {
+            console.error("Failed to update status on server:", err);
+            // show simple alert to user
+            alert(err?.message || "Gagal memperbarui status pesanan di server");
+            // do not update local state if server update failed
+            closeOrderForm();
+            return;
+          }
+        }
+
+        setOrders((currentOrders) =>
+          currentOrders.map((order) =>
+            order.id === editingOrder.id
+              ? {
+                  ...order,
+                  customer: trimmedCustomer,
+                  outlet: orderForm.outlet,
+                  service: orderForm.service,
+                  total: trimmedTotal,
+                  status: orderForm.status,
+                }
+              : order,
+          ),
+        );
     }
 
     closeOrderForm();

@@ -54,6 +54,7 @@ export type AdminUser = {
 export type AdminOrderStatus =
   | "Pending"
   | "Processing"
+  | "ReadyForDelivery"
   | "Completed"
   | "Cancelled";
 
