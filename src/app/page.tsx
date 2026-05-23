@@ -1,34 +1,37 @@
 "use client";
-import { BASE_URL } from "@/lib/api-client";
-import { useEffect, useState } from "react";
 
-interface ApiResponse {
-  message: string;
-  data: unknown;
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+const ROLE_REDIRECT: Record<string, string> = {
+  KURIR:    "/driver/pesanan/masuk",
+  PENGGUNA: "/user/beranda",
+  ADMIN:    "/admin",
+};
+
+function getRoleFromToken(token: string): string | null {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.role ?? null;
+  } catch {
+    return null;
+  }
 }
 
-export default function Home() {
-  const [data, setData] = useState<ApiResponse | null>(null);
+export default function RootPage() {
+  const router = useRouter();
 
   useEffect(() => {
-    fetch(`${BASE_URL}/test-db`)
-      .then((res) => res.json())
-      .then((resData) => setData(resData))
-      .catch((err) => console.error("Error fetching message:", err));
-  }, []);
+    const token = localStorage.getItem("token");
 
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <h1 className="text-4xl font-bold mb-8">Laundry Santuy Dashboard</h1>
+    if (!token) {
+      router.replace("/auth/login");
+      return;
+    }
 
-      <div className="p-6 border rounded-xl bg-black shadow-lg text-white">
-        <h2 className="text-xl font-semibold mb-2">Database Test Result:</h2>
-        {data ? (
-          <p className="text-green-600 font-mono">{data.message}</p>
-        ) : (
-          <p className="text-red-600 font-mono">Loading...</p>
-        )}
-      </div>
-    </main>
-  );
+    const role = getRoleFromToken(token);
+    router.replace(ROLE_REDIRECT[role ?? ""] ?? "/auth/login");
+  }, [router]);
+
+  return null;
 }
