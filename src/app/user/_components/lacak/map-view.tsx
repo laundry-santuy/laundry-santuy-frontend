@@ -79,6 +79,7 @@ export function MapView({
   useEffect(() => {
     if (!containerRef.current) return;
     let cancelled = false;
+    let ro: ResizeObserver | null = null;
 
     const init = async () => {
       const L = await import("leaflet");
@@ -132,12 +133,12 @@ export function MapView({
       mapRef.current = map;
 
       // Dual invalidateSize to survive dialog/animation timing
-      setTimeout(() => map.invalidateSize(), 50);
-      setTimeout(() => map.invalidateSize(), 300);
+      setTimeout(() => { if (mapRef.current) map.invalidateSize(); }, 50);
+      setTimeout(() => { if (mapRef.current) map.invalidateSize(); }, 300);
 
-      // Track container resize (e.g. sidebar collapse)
-      if (containerRef.current) {
-        const ro = new ResizeObserver(() => map.invalidateSize());
+      // Track container resize — use outer `ro` so cleanup can disconnect it
+      if (containerRef.current && !cancelled) {
+        ro = new ResizeObserver(() => { if (mapRef.current) map.invalidateSize(); });
         ro.observe(containerRef.current);
       }
     };
@@ -146,6 +147,8 @@ export function MapView({
 
     return () => {
       cancelled = true;
+      ro?.disconnect();
+      ro = null;
       mapRef.current?.off();
       mapRef.current?.remove();
       mapRef.current = null;

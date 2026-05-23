@@ -15,14 +15,19 @@ import type {
   PickupSlot,
 } from "./types";
 
-function generatePickupSlots(): PickupSlot[] {
+export function generatePickupSlots(
+  jamMulai: string | null = "08:00",
+  jamSelesai: string | null = "20:00",
+  sisaKapasitas: number = 20,
+  maxKapasitas: number = 20,
+): PickupSlot[] {
   const now      = new Date();
   const today    = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
   const formatDate = (d: Date) =>
-    d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
   const todayStr    = formatDate(today);
   const tomorrowStr = formatDate(tomorrow);
@@ -30,19 +35,15 @@ function generatePickupSlots(): PickupSlot[] {
 
   const pad = (n: number) => n.toString().padStart(2, "0");
 
-  const capacityFor = (h: number) => {
-    if (h <= 10) return "8 slot tersisa";
-    if (h <= 12) return "5 slot tersisa";
-    if (h <= 16) return "3 slot tersisa";
-    return "6 slot tersisa";
-  };
+  const startHour = jamMulai ? parseInt(jamMulai.split(":")[0], 10) : 8;
+  const endHour   = jamSelesai ? parseInt(jamSelesai.split(":")[0], 10) : 20;
 
   const todaySlots: PickupSlot[] = [];
   const tomorrowSlots: PickupSlot[] = [];
   let firstTodaySet = false;
 
-  for (let h = 8; h < 20; h++) {
-    const window = `${pad(h)}.00 - ${pad(h + 1)}.00`;
+  for (let h = startHour; h < endHour; h++) {
+    const window = `${pad(h)}.00-${pad(h + 1)}.00 WIB`;
 
     if (h > currentHour) {
       const recommended = !firstTodaySet;
@@ -52,7 +53,7 @@ function generatePickupSlots(): PickupSlot[] {
         day:      "Hari ini",
         date:     todayStr,
         window,
-        capacity: capacityFor(h),
+        capacity: sisaKapasitas > 0 ? `${sisaKapasitas} slot tersisa` : "Penuh",
         ...(recommended ? { recommended: true } : {}),
       });
     }
@@ -62,11 +63,10 @@ function generatePickupSlots(): PickupSlot[] {
       day:      "Besok",
       date:     tomorrowStr,
       window,
-      capacity: capacityFor(h),
+      capacity: `${maxKapasitas} slot tersisa`,
     });
   }
 
-  // Today's remaining slots first, then tomorrow's full range
   return [...todaySlots, ...tomorrowSlots];
 }
 

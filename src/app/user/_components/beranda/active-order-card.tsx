@@ -2,6 +2,13 @@ import { Clock, MessageCircle, Phone, Star, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ActiveOrder, ActiveOrderStep } from "./types";
 
+const STEP_DESCRIPTIONS: Record<string, string> = {
+  "Diterima":  "Pesanan sudah diterima outlet dan menunggu proses selanjutnya.",
+  "Dicuci":    "Pakaian kamu sedang dalam proses pencucian.",
+  "Disetrika": "Pakaian kamu sedang disetrika dan hampir siap dikirim.",
+  "Selesai":   "Pakaian siap, kurir akan segera mengantar ke alamatmu.",
+};
+
 type ActiveOrderCardProps = {
   order: ActiveOrder;
 };
@@ -71,22 +78,28 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
     { label: "Estimasi", value: order.eta },
   ];
 
+  const currentStep = order.steps.find((s) => s.status === "current");
+  const statusDescription =
+    (currentStep && STEP_DESCRIPTIONS[currentStep.label]) ??
+    "Pesanan kamu sedang diproses oleh outlet.";
+
+  const phone = order.courier?.noTelepon ?? null;
+  const waNumber = phone
+    ? phone.replace(/^0/, "62").replace(/\D/g, "")
+    : null;
+
   return (
     <article className="odong-surface-strong rounded-[24px] p-4 shadow-[0_18px_40px_rgba(25,28,29,0.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_48px_rgba(25,28,29,0.07)] sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary-600">
-            Pesanan aktif
-          </p>
-          <h3 className="odong-text mt-1 text-xl font-extrabold leading-7 text-neutral-900 sm:text-2xl">
+          <h3 className="odong-text text-xl font-extrabold leading-7 text-neutral-900 sm:text-2xl">
             Laundry sedang diproses
           </h3>
-          <p className="odong-muted mt-1 max-w-xl text-sm leading-6 text-neutral-500">
-            Status terakhir: pakaian kamu sedang masuk tahap setrika dan akan
-            segera siap dikirim kembali.
+          <p className="odong-muted mt-1 text-sm leading-6 text-neutral-500">
+            {statusDescription}
           </p>
         </div>
-        <div className="inline-flex w-fit items-center gap-2 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-700">
+        <div className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-700">
           <Clock className="h-3.5 w-3.5" aria-hidden="true" />
           {order.eta}
         </div>
@@ -135,15 +148,29 @@ export function ActiveOrderCard({ order }: ActiveOrderCardProps) {
           <div className="flex gap-2 sm:justify-end">
             <button
               type="button"
-              aria-label="Telepon kurir"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white shadow-[0_8px_18px_rgba(38,113,238,0.25)] transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+              disabled={!phone}
+              aria-label={phone ? "Telepon kurir" : "Nomor telepon kurir tidak tersedia"}
+              onClick={() => { if (phone) window.location.href = `tel:${phone}`; }}
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-95",
+                phone
+                  ? "bg-primary-600 text-white shadow-[0_8px_18px_rgba(38,113,238,0.25)] hover:bg-primary-700"
+                  : "cursor-not-allowed bg-neutral-200 text-neutral-400",
+              )}
             >
               <Phone className="h-5 w-5" aria-hidden="true" />
             </button>
             <button
               type="button"
-              aria-label="Kirim pesan ke kurir"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white shadow-[0_8px_18px_rgba(38,113,238,0.25)] transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+              disabled={!waNumber}
+              aria-label={waNumber ? "Chat kurir via WhatsApp" : "Chat kurir tidak tersedia"}
+              onClick={() => { if (waNumber) window.open(`https://wa.me/${waNumber}`, "_blank", "noopener,noreferrer"); }}
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-95",
+                waNumber
+                  ? "bg-primary-600 text-white shadow-[0_8px_18px_rgba(38,113,238,0.25)] hover:bg-primary-700"
+                  : "cursor-not-allowed bg-neutral-200 text-neutral-400",
+              )}
             >
               <MessageCircle className="h-5 w-5" aria-hidden="true" />
             </button>

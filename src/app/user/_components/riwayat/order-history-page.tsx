@@ -69,7 +69,7 @@ function mapRawToHistoryOrder(
     weight: `${raw.berat} kg`,
     total: formatRupiah(raw.total),
     subtotal: formatRupiah(raw.total),
-    discount: "Rp 0",
+    discount: "Rp0",
     paymentMethod: "-",
     paymentStatus:
       status === "Selesai" ? "Lunas" : status === "Dibatalkan" ? "Refund" : "Menunggu",

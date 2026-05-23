@@ -37,6 +37,12 @@ export type OutletBackend = {
   longitude: number | null;
   jamMulai: string | null;
   jamSelesai: string | null;
+  isTutupSementara: boolean;
+  maxKapasitas: number;
+  namaBank: string | null;
+  nomorRekening: string | null;
+  atasNama: string | null;
+  qrisUrl: string | null;
 };
 
 export type PengaturanOutletResponse = {
@@ -218,6 +224,7 @@ export type PengaturanHarga = {
   hargaMaksimum: number;
   biayaAntarJemput: number;
   freeDeliveryMinimum: number;
+  estimasiPickup: string;
 };
 
 export type KodePromo = {
@@ -394,6 +401,15 @@ export function updatePengaturanUmum(body: UpdatePengaturanUmumBody): Promise<{ 
   return apiClient.put('/api/admin/pengaturan-umum', body);
 }
 
+export type UpdatePengaturanHargaBody = {
+  biayaAntarJemput?: number;
+  estimasiPickup?: string;
+};
+
+export function updatePengaturanHarga(body: UpdatePengaturanHargaBody): Promise<{ message: string }> {
+  return apiClient.put('/api/admin/pengaturan-harga', body);
+}
+
 export type UpdatePengaturanOutletBody = {
   id_outlet?: string | null;
   namaOutlet?: string;
@@ -404,6 +420,11 @@ export type UpdatePengaturanOutletBody = {
   longitude?: number | null;
   jamMulai?: string | null;
   jamSelesai?: string | null;
+  isTutupSementara?: boolean;
+  maxKapasitas?: number;
+  namaBank?: string | null;
+  nomorRekening?: string | null;
+  atasNama?: string | null;
 };
 
 export function updatePengaturanOutlet(body: UpdatePengaturanOutletBody): Promise<{ message: string }> {
@@ -419,6 +440,10 @@ export type CreatePengaturanOutletBody = {
   longitude?: number | null;
   jamMulai?: string | null;
   jamSelesai?: string | null;
+  maxKapasitas?: number;
+  namaBank?: string | null;
+  nomorRekening?: string | null;
+  atasNama?: string | null;
 };
 
 export function createPengaturanOutlet(body: CreatePengaturanOutletBody): Promise<{ message: string; pengaturanOutlet: OutletBackend }> {
@@ -427,4 +452,44 @@ export function createPengaturanOutlet(body: CreatePengaturanOutletBody): Promis
 
 export function deletePengaturanOutlet(idOutlet: string): Promise<{ message: string }> {
   return apiClient.del(`/api/admin/pengaturan-outlet/${idOutlet}`);
+}
+
+export function uploadQrisOutlet(idOutlet: string, imageBase64: string): Promise<{ qrisUrl: string }> {
+  return apiClient.post<{ qrisUrl: string }>(`/api/admin/pengaturan-outlet/${idOutlet}/upload-qris`, { imageBase64 });
+}
+
+// ── Add-on management ─────────────────────────────────────────────────────────
+
+export type AdminAddonItem = {
+  id_addon: string;
+  nama: string;
+  deskripsi: string | null;
+  harga: number;
+  icon_key: string | null;
+  is_active: boolean;
+};
+
+export type CreateAdminAddonBody = {
+  nama: string;
+  deskripsi?: string;
+  harga?: number;
+  icon_key?: string;
+};
+
+export type UpdateAdminAddonBody = Partial<CreateAdminAddonBody> & { is_active?: boolean };
+
+export function fetchAdminAddonList(): Promise<{ addons: AdminAddonItem[] }> {
+  return apiClient.get<{ addons: AdminAddonItem[] }>(withCacheBuster('/api/admin/addon'));
+}
+
+export function createAdminAddon(body: CreateAdminAddonBody): Promise<{ message: string; addon: AdminAddonItem }> {
+  return apiClient.post<{ message: string; addon: AdminAddonItem }>('/api/admin/addon', body);
+}
+
+export function updateAdminAddon(id: string, body: UpdateAdminAddonBody): Promise<{ message: string; addon: AdminAddonItem }> {
+  return apiClient.put<{ message: string; addon: AdminAddonItem }>(`/api/admin/addon/${id}`, body);
+}
+
+export function deleteAdminAddon(id: string): Promise<{ message: string }> {
+  return apiClient.del<{ message: string }>(`/api/admin/addon/${id}`);
 }

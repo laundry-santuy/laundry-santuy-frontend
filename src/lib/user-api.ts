@@ -9,11 +9,16 @@ export type BerandaResponse = {
     username: string;
     role: string;
     inisial: string;
+    alamat: string | null;
   };
   promoHariIni: {
     judul: string;
     deskripsi: string;
     isActive: boolean;
+  } | null;
+  statsBeranda: {
+    ratingKurir: number | null;
+    estimasiPickup: string;
   };
   ringkasan: {
     totalPesanan: number;
@@ -36,6 +41,9 @@ export type BerandaResponse = {
       rating: number;
       kendaraan: string;
       noPolisi: string;
+      noTelepon: string | null;
+      canCall: boolean;
+      canChat: boolean;
     } | null;
   } | null;
   pesananTerbaru: {
@@ -46,6 +54,16 @@ export type BerandaResponse = {
     total: number;
     status: string;
     waktu: string | null;
+  }[];
+  layananPopuler: {
+    id_layanan: string;
+    nama: string;
+    harga: number;
+    satuan: string;
+    tipe: string;
+    durasi: string | null;
+    deskripsi: string | null;
+    icon_key: string | null;
   }[];
 };
 
@@ -202,8 +220,8 @@ export function formatWaktu(iso: string | null): string {
 }
 
 export function formatRupiah(value: number): string {
-  if (!value) return 'Rp 0';
-  return `Rp ${value.toLocaleString('id-ID')}`;
+  if (!value) return 'Rp0';
+  return `Rp${value.toLocaleString('id-ID')}`;
 }
 
 // ── API functions ─────────────────────────────────────────────────────────────
@@ -223,6 +241,14 @@ export type PesanLayananItem = {
   step_quantity: number;
 };
 
+export type AddonTersediaItem = {
+  id_addon: string;
+  nama: string;
+  deskripsi: string | null;
+  harga: number;
+  icon_key: string | null;
+};
+
 export type PesanResponse = {
   pilihLayanan: {
     items: PesanLayananItem[];
@@ -231,11 +257,49 @@ export type PesanResponse = {
     id_laundry: string;
     nama: string;
     alamat: string | null;
+    jarak_km: number | null;
+    jam_mulai: string | null;
+    jam_selesai: string | null;
+    jam_operasional: string | null;
+    is_open: boolean;
+    is_tutup_sementara: boolean;
+    jumlah_kurir: number;
+    kapasitas_persen: number;
+    sisa_kapasitas: number;
+    max_kapasitas: number;
+    nama_bank: string | null;
+    nomor_rekening: string | null;
+    atas_nama: string | null;
+    qris_url: string | null;
   }[];
+  addonTersedia: AddonTersediaItem[];
+  alamatPickupUser: string | null;
+  infoPickup: {
+    estimasiPickup: string;
+    biayaPickup: number;
+    minGratisPickup: number;
+  };
+};
+
+export type PromoApiItem = {
+  id: string;
+  kode: string;
+  diskon_persen: number | null;
+  diskon_nominal: number | null;
+  min_pembelian: number;
+  tanggal_berakhir: string;
+};
+
+export type PromoAktifResponse = {
+  promos: PromoApiItem[];
 };
 
 export async function fetchBeranda(): Promise<BerandaResponse> {
   return apiClient.get<BerandaResponse>('/api/user/beranda');
+}
+
+export async function fetchPromoAktif(): Promise<PromoAktifResponse> {
+  return apiClient.get<PromoAktifResponse>('/api/user/promo');
 }
 
 export async function fetchPesan(): Promise<PesanResponse> {
@@ -268,6 +332,37 @@ export async function createPesanan(body: CreatePesananBody): Promise<CreatePesa
 
 export async function updateProfilUser(body: UpdateProfilBody): Promise<{ message: string; data: unknown }> {
   return apiClient.put('/api/user/profil', body);
+}
+
+export type AlamatItem = {
+  id: string;
+  label: string;
+  alamat: string;
+  lat: number | null;
+  lng: number | null;
+  is_utama: boolean;
+};
+
+export type AlamatListResponse = { alamat: AlamatItem[] };
+
+export async function fetchAlamatList(): Promise<AlamatListResponse> {
+  return apiClient.get<AlamatListResponse>('/api/user/alamat');
+}
+
+export async function addAlamat(body: { label: string; alamat: string; lat?: number | null; lng?: number | null; is_utama?: boolean }): Promise<{ message: string; data: AlamatItem }> {
+  return apiClient.post<{ message: string; data: AlamatItem }>('/api/user/alamat', body);
+}
+
+export async function updateAlamat(id: string, body: { label: string; alamat: string; lat?: number | null; lng?: number | null }): Promise<{ message: string; data: AlamatItem }> {
+  return apiClient.put<{ message: string; data: AlamatItem }>(`/api/user/alamat/${id}`, body);
+}
+
+export async function deleteAlamat(id: string): Promise<{ message: string }> {
+  return apiClient.del<{ message: string }>(`/api/user/alamat/${id}`);
+}
+
+export async function setAlamatUtama(id: string): Promise<{ message: string }> {
+  return apiClient.put<{ message: string }>(`/api/user/alamat/${id}/utama`, {});
 }
 
 export type EtaAIResponse = {

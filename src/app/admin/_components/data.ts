@@ -237,6 +237,8 @@ export const defaultAdminSettings: AdminSettingValues = {
   outletPhone: "021-5550000",
   pickupRadiusKm: "4.5",
   dailyCapacityKg: "320",
+  biayaAntarJemput: "8000",
+  estimasiPickup: "2 jam",
   pricePerKg: "Rp 7.500",
   expressSurcharge: "35%",
   minimumOrder: "Rp 18.000",

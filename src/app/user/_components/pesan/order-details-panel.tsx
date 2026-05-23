@@ -1,3 +1,5 @@
+"use client";
+
 import {
   CalendarClock,
   CheckCircle2,
@@ -18,6 +20,7 @@ type OrderDetailsPanelProps = {
   service: ServiceOption;
   quantity: number;
   selectedSlotId: string;
+  selectedPickupDay: string;
   selectedAddressId: string;
   selectedAddOnIds: string[];
   slots: PickupSlot[];
@@ -26,6 +29,7 @@ type OrderDetailsPanelProps = {
   onDecreaseQuantity: () => void;
   onIncreaseQuantity: () => void;
   onSelectSlot: (slotId: string) => void;
+  onSelectDay: (day: string) => void;
   onSelectAddress: (addressId: string) => void;
   onToggleAddOn: (addOnId: string) => void;
 };
@@ -46,6 +50,7 @@ export function OrderDetailsPanel({
   service,
   quantity,
   selectedSlotId,
+  selectedPickupDay,
   selectedAddressId,
   selectedAddOnIds,
   slots,
@@ -54,11 +59,18 @@ export function OrderDetailsPanel({
   onDecreaseQuantity,
   onIncreaseQuantity,
   onSelectSlot,
+  onSelectDay,
   onSelectAddress,
   onToggleAddOn,
 }: OrderDetailsPanelProps) {
   const minReached = quantity <= service.minQuantity;
   const maxReached = quantity >= service.maxQuantity;
+
+  const todaySlots = slots.filter((s) => s.day === "Hari ini");
+  const tomorrowSlots = slots.filter((s) => s.day === "Besok");
+  const todayDate = todaySlots[0]?.date ?? "";
+  const tomorrowDate = tomorrowSlots[0]?.date ?? "";
+  const visibleTimeSlots = slots.filter((s) => s.day === selectedPickupDay);
 
   return (
     <section className="rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-5 shadow-[0_14px_34px_rgba(25,28,29,0.045)] backdrop-blur-xl sm:p-6">
@@ -117,41 +129,66 @@ export function OrderDetailsPanel({
           </p>
         </div>
 
+        {/* ── Slot Picker ─────────────────────────────────────────────── */}
         <div>
-          <label
-            htmlFor="slot-pickup"
-            className="text-sm font-bold text-[var(--odong-text)]"
-          >
-            Slot pickup
-          </label>
-          <div className="relative mt-3">
-            <select
-              id="slot-pickup"
-              value={selectedSlotId}
-              onChange={(e) => onSelectSlot(e.target.value)}
-              className="w-full appearance-none rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] py-3 pl-4 pr-10 text-sm font-semibold text-[var(--odong-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200"
-            >
-              <option value="" disabled>
-                Pilih slot waktu...
-              </option>
-              {slots.map((slot) => (
-                <option key={slot.id} value={slot.id}>
-                  {slot.day}, {slot.date} · {slot.window}
-                  {slot.recommended ? " ★" : ""} — {slot.capacity}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--odong-muted)]"
-              aria-hidden="true"
-            />
+          <p className="text-sm font-bold text-[var(--odong-text)]">Slot pickup</p>
+
+          {/* Row 1: Tanggal + Jam — dua dropdown sejajar */}
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {/* Kiri: Pilih tanggal */}
+            <div className="relative">
+              <select
+                value={selectedPickupDay}
+                onChange={(e) => onSelectDay(e.target.value)}
+                className="w-full appearance-none rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] py-3 pl-4 pr-10 text-sm font-semibold text-[var(--odong-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              >
+                <option value="" disabled>Pilih tanggal…</option>
+                {todaySlots.length > 0 && (
+                  <option value="Hari ini">Hari ini · {todayDate}</option>
+                )}
+                {tomorrowSlots.length > 0 && (
+                  <option value="Besok">Besok · {tomorrowDate}</option>
+                )}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--odong-muted)]"
+                aria-hidden="true"
+              />
+            </div>
+
+            {/* Kanan: Pilih jam */}
+            <div className="relative">
+              <select
+                value={selectedSlotId}
+                onChange={(e) => onSelectSlot(e.target.value)}
+                disabled={!selectedPickupDay || visibleTimeSlots.length === 0}
+                className={cn(
+                  "w-full appearance-none rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] py-3 pl-4 pr-10 text-sm font-semibold text-[var(--odong-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200",
+                  (!selectedPickupDay || visibleTimeSlots.length === 0) && "cursor-not-allowed opacity-50",
+                )}
+              >
+                <option value="" disabled>Pilih jam…</option>
+                {visibleTimeSlots.map((slot) => (
+                  <option key={slot.id} value={slot.id} disabled={slot.capacity === "Penuh"}>
+                    {slot.window.replace(" WIB", "")}
+                    {slot.capacity === "Penuh" ? " (Penuh)" : ""}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--odong-muted)]"
+                aria-hidden="true"
+              />
+            </div>
           </div>
-          {selectedSlotId && (() => {
+
+          {/* Row 2: Info slot — muncul setelah keduanya dipilih */}
+          {selectedPickupDay && selectedSlotId && (() => {
             const slot = slots.find((s) => s.id === selectedSlotId);
             return slot ? (
               <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary-700">
-                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                {slot.day}, {slot.date} · {slot.window} · {slot.capacity}
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {slot.capacity} tersedia · {slot.day}, {slot.date} · {slot.window}
               </p>
             ) : null;
           })()}
@@ -196,7 +233,7 @@ export function OrderDetailsPanel({
                     <span className="block text-sm font-extrabold">
                       {address.label} - {address.recipient}
                     </span>
-                    <span className="mt-1 block text-sm leading-5 opacity-75">
+                    <span className="mt-1 block max-h-[60px] overflow-y-auto text-sm leading-5 opacity-75 [scrollbar-width:thin]">
                       {address.address}
                     </span>
                     <span className="mt-2 block text-xs font-medium opacity-65">
@@ -209,12 +246,21 @@ export function OrderDetailsPanel({
           </div>
         </fieldset>
 
-        <div className="space-y-6">
-          <fieldset>
-            <legend className="text-sm font-bold text-[var(--odong-text)]">
-              Add-on
-            </legend>
-            <div className="mt-3 divide-y divide-[var(--odong-border)] overflow-hidden rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)]">
+        <div>
+          <p className="flex items-center gap-2 text-sm font-bold text-[var(--odong-text)]">
+            Add-on
+            {selectedAddOnIds.length > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1.5 text-[10px] font-bold text-white">
+                {selectedAddOnIds.length}
+              </span>
+            )}
+          </p>
+          {addOns.length === 0 ? (
+            <p className="mt-3 text-xs text-[var(--odong-muted)]">
+              Belum ada add-on yang tersedia.
+            </p>
+          ) : (
+            <div className="mt-3 grid grid-cols-4 gap-2">
               {addOns.map((addOn) => {
                 const Icon = addOn.icon;
                 const selected = selectedAddOnIds.includes(addOn.id);
@@ -225,47 +271,36 @@ export function OrderDetailsPanel({
                     type="button"
                     aria-pressed={selected}
                     onClick={() => onToggleAddOn(addOn.id)}
-                    className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition hover:bg-primary-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-300"
+                    className={cn(
+                      "flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]",
+                      selected
+                        ? "border-primary-200 bg-primary-50"
+                        : "border-[var(--odong-border)] bg-[var(--odong-surface-strong)]",
+                    )}
                   >
-                    <span className="flex items-center gap-3">
-                      <span
-                        className={cn(
-                          "flex h-9 w-9 items-center justify-center rounded-full",
-                          selected
-                            ? "bg-primary-600 text-white"
-                            : "bg-primary-50 text-primary-600",
-                        )}
-                      >
-                        <Icon className="h-4 w-4" aria-hidden="true" />
-                      </span>
-                      <span>
-                        <span className="block text-sm font-extrabold text-[var(--odong-text)]">
-                          {addOn.name}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-[var(--odong-muted)]">
-                          {addOn.description}
-                        </span>
-                      </span>
+                    <span
+                      className={cn(
+                        "flex h-10 w-10 items-center justify-center rounded-full transition",
+                        selected
+                          ? "bg-primary-600 text-white shadow-[0_6px_14px_rgba(0,88,202,0.25)]"
+                          : "bg-primary-50 text-primary-600",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden="true" />
                     </span>
-                    <span className="text-right">
-                      <span className="block text-sm font-bold text-primary-700">
-                        {addOn.price > 0
-                          ? formatCurrency(addOn.price)
-                          : "Gratis"}
+                    <span className="min-w-0 w-full">
+                      <span className="block truncate text-[11px] font-extrabold leading-tight text-[var(--odong-text)]">
+                        {addOn.name}
                       </span>
-                      {selected ? (
-                        <CheckCircle2
-                          className="ml-auto mt-1 h-4 w-4 text-primary-600"
-                          aria-hidden="true"
-                        />
-                      ) : null}
+                      <span className="mt-0.5 block text-[10px] font-bold text-primary-600">
+                        {addOn.price > 0 ? formatCurrency(addOn.price) : "Gratis"}
+                      </span>
                     </span>
                   </button>
                 );
               })}
             </div>
-          </fieldset>
-
+          )}
         </div>
       </div>
     </section>

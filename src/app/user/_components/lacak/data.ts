@@ -25,7 +25,7 @@ export const trackingOrders: TrackingOrder[] = [
     updatedAt: "Diperbarui 5 menit lalu",
     weight: "2.5 kg",
     total: "Rp34.000",
-    pickupWindow: "Hari ini, 14.00 - 16.00",
+    pickupWindow: "Hari ini, 14.00-16.00 WIB",
     outlet: "Santuy Kemang",
     payment: "E-wallet",
     pickup: {
@@ -101,7 +101,7 @@ export const trackingOrders: TrackingOrder[] = [
     updatedAt: "Diperbarui 2 menit lalu",
     weight: "1.5 kg",
     total: "Rp27.000",
-    pickupWindow: "Hari ini, 18.00 - 20.00",
+    pickupWindow: "Hari ini, 18.00-20.00 WIB",
     outlet: "Santuy Kemang",
     payment: "Tunai",
     pickup: {

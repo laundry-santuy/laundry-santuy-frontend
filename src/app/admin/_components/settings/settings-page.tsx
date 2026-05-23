@@ -14,6 +14,7 @@ import {
   Shield,
   Sparkles,
   Store,
+  Upload,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -42,10 +43,13 @@ import {
   createPengaturanOutlet,
   deletePengaturanOutlet,
   updatePengaturanUmum,
+  updatePengaturanHarga,
   updatePengaturanOutlet,
+  uploadQrisOutlet,
   type OutletBackend,
 } from "@/lib/admin-api";
 import { PromoCodesPanel } from "./promo-codes-panel";
+import { AddonManagementPanel } from "./addon-panel";
 import {
   EmailSettingsPanel,
   SaveStatusCard,
@@ -422,6 +426,12 @@ type OutletDraft = {
   longitude: string;
   jamMulai: string;
   jamSelesai: string;
+  isTutupSementara: boolean;
+  maxKapasitas: string;
+  namaBank: string;
+  nomorRekening: string;
+  atasNama: string;
+  qrisUrl: string;
 };
 
 function emptyOutletDraft(): OutletDraft {
@@ -434,6 +444,12 @@ function emptyOutletDraft(): OutletDraft {
     longitude: "",
     jamMulai: defaultAdminSettings.openTime,
     jamSelesai: defaultAdminSettings.closeTime,
+    isTutupSementara: false,
+    maxKapasitas: "20",
+    namaBank: "",
+    nomorRekening: "",
+    atasNama: "",
+    qrisUrl: "",
   };
 }
 
@@ -447,6 +463,12 @@ function outletDraftFromBackend(outlet: OutletBackend): OutletDraft {
     longitude: outlet.longitude != null ? String(outlet.longitude) : "",
     jamMulai: outlet.jamMulai ?? defaultAdminSettings.openTime,
     jamSelesai: outlet.jamSelesai ?? defaultAdminSettings.closeTime,
+    isTutupSementara: outlet.isTutupSementara ?? false,
+    maxKapasitas: String(outlet.maxKapasitas ?? 20),
+    namaBank: outlet.namaBank ?? "",
+    nomorRekening: outlet.nomorRekening ?? "",
+    atasNama: outlet.atasNama ?? "",
+    qrisUrl: outlet.qrisUrl ?? "",
   };
 }
 
@@ -496,10 +518,12 @@ export function AdminSettingsPage({
       openTime: outlet.pengaturanOutlet?.jamMulai || defaultAdminSettings.openTime,
       closeTime: outlet.pengaturanOutlet?.jamSelesai || defaultAdminSettings.closeTime,
 
-      // Pricing settings  
+      // Pricing settings
       minimumOrder: hargaPromo?.pengaturanHarga?.hargaMinimum.toString() || defaultAdminSettings.minimumOrder,
       pricePerKg: hargaPromo?.pengaturanHarga?.hargaMaksimum.toString() || defaultAdminSettings.pricePerKg,
       expressSurcharge: hargaPromo?.pengaturanHarga?.biayaAntarJemput.toString() || defaultAdminSettings.expressSurcharge,
+      biayaAntarJemput: hargaPromo?.pengaturanHarga?.biayaAntarJemput?.toString() || defaultAdminSettings.biayaAntarJemput,
+      estimasiPickup: hargaPromo?.pengaturanHarga?.estimasiPickup || defaultAdminSettings.estimasiPickup,
 
       // Security settings
       twoFactorRequired: keamanan?.keamananAplikasi?.twoFactorAuth ?? defaultAdminSettings.twoFactorRequired,
@@ -521,6 +545,8 @@ export function AdminSettingsPage({
   const [editOutletId, setEditOutletId] = useState<string | null>(null);
   const [deleteOutletId, setDeleteOutletId] = useState<string | null>(null);
   const [outletPanelKey, setOutletPanelKey] = useState(0);
+  const [qrisFile, setQrisFile] = useState<File | null>(null);
+  const [qrisPreview, setQrisPreview] = useState<string | null>(null);
   const [promoDraft, setPromoDraft] =
     useState<PromoDraft>(defaultPromoDraft);
   const [promoFeedback, setPromoFeedback] = useState<{
@@ -625,6 +651,8 @@ export function AdminSettingsPage({
   const handleOpenEditOutlet = (outlet: OutletBackend) => {
     setEditOutletId(outlet.id_outlet);
     setEditOutletDraft(outletDraftFromBackend(outlet));
+    setQrisFile(null);
+    setQrisPreview(null);
     setSaveFeedback(null);
   };
 
@@ -646,6 +674,10 @@ export function AdminSettingsPage({
         longitude: outletDraft.longitude ? Number(outletDraft.longitude) : null,
         jamMulai: outletDraft.jamMulai,
         jamSelesai: outletDraft.jamSelesai,
+        maxKapasitas: outletDraft.maxKapasitas ? Number(outletDraft.maxKapasitas) : 20,
+        namaBank: outletDraft.namaBank || null,
+        nomorRekening: outletDraft.nomorRekening || null,
+        atasNama: outletDraft.atasNama || null,
       });
 
       const nextOutlet = result.pengaturanOutlet;
@@ -683,23 +715,52 @@ export function AdminSettingsPage({
         longitude: editOutletDraft.longitude ? Number(editOutletDraft.longitude) : null,
         jamMulai: editOutletDraft.jamMulai,
         jamSelesai: editOutletDraft.jamSelesai,
+        isTutupSementara: editOutletDraft.isTutupSementara,
+        maxKapasitas: editOutletDraft.maxKapasitas ? Number(editOutletDraft.maxKapasitas) : 20,
+        namaBank: editOutletDraft.namaBank || null,
+        nomorRekening: editOutletDraft.nomorRekening || null,
+        atasNama: editOutletDraft.atasNama || null,
       });
+
+      let newQrisUrl = editOutletDraft.qrisUrl;
+      if (qrisFile && editOutletId) {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(qrisFile);
+        });
+        const uploadResult = await uploadQrisOutlet(editOutletId, base64);
+        newQrisUrl = uploadResult.qrisUrl;
+      }
 
       setOutletRecords((current) =>
         current.map((outlet) =>
           outlet.id_outlet === editOutletId
             ? {
                 ...outlet,
-                ...editOutletDraft,
-                id_outlet: editOutletId,
+                namaOutlet: editOutletDraft.namaOutlet,
+                alamatOutlet: editOutletDraft.alamatOutlet,
+                email: editOutletDraft.email,
+                nomorTelepon: editOutletDraft.nomorTelepon,
                 latitude: editOutletDraft.latitude ? Number(editOutletDraft.latitude) : null,
                 longitude: editOutletDraft.longitude ? Number(editOutletDraft.longitude) : null,
+                jamMulai: editOutletDraft.jamMulai,
+                jamSelesai: editOutletDraft.jamSelesai,
+                isTutupSementara: editOutletDraft.isTutupSementara,
+                maxKapasitas: editOutletDraft.maxKapasitas ? Number(editOutletDraft.maxKapasitas) : 20,
+                namaBank: editOutletDraft.namaBank || null,
+                nomorRekening: editOutletDraft.nomorRekening || null,
+                atasNama: editOutletDraft.atasNama || null,
+                qrisUrl: newQrisUrl || null,
               }
             : outlet,
         ),
       );
       setEditOutletDraft(null);
       setEditOutletId(null);
+      setQrisFile(null);
+      setQrisPreview(null);
       setSaveFeedback({ tone: "success", message: "Outlet berhasil diperbarui." });
       setOutletPanelKey((key) => key + 1);
     } catch (error) {
@@ -768,6 +829,11 @@ export function AdminSettingsPage({
       };
 
       await updatePengaturanUmum(umumPayload);
+
+      await updatePengaturanHarga({
+        biayaAntarJemput: Number(settings.biayaAntarJemput) || 0,
+        estimasiPickup: settings.estimasiPickup,
+      });
 
       setOutletPanelKey((key) => key + 1);
 
@@ -1011,6 +1077,38 @@ export function AdminSettingsPage({
                   }
                   helper="Format 21:00."
                 />
+                <SettingInput
+                  label="Kapasitas Harian"
+                  type="number"
+                  value={outletDraft.maxKapasitas}
+                  onChange={(value) =>
+                    setOutletDraft((current) => ({ ...current, maxKapasitas: value }))
+                  }
+                  helper="Maks. pesanan per hari di outlet ini."
+                />
+                <SettingInput
+                  label="Nama Bank"
+                  value={outletDraft.namaBank}
+                  onChange={(value) =>
+                    setOutletDraft((current) => ({ ...current, namaBank: value }))
+                  }
+                  helper='Contoh: BCA, BRI, Mandiri.'
+                />
+                <SettingInput
+                  label="Nomor Rekening"
+                  value={outletDraft.nomorRekening}
+                  onChange={(value) =>
+                    setOutletDraft((current) => ({ ...current, nomorRekening: value }))
+                  }
+                />
+                <SettingInput
+                  className="md:col-span-2"
+                  label="Atas Nama"
+                  value={outletDraft.atasNama}
+                  onChange={(value) =>
+                    setOutletDraft((current) => ({ ...current, atasNama: value }))
+                  }
+                />
               </div>
               <div className="flex flex-col gap-3 border-t border-(--odong-border) pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm leading-6 text-(--odong-muted)">
@@ -1031,6 +1129,23 @@ export function AdminSettingsPage({
 
           {activeSection === "harga-promo" ? (
             <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <SettingInput
+                  id="settings-biaya-antar-jemput"
+                  label="Biaya Antar Jemput (Rp)"
+                  value={settings.biayaAntarJemput}
+                  onChange={(value) => updateSetting("biayaAntarJemput", value)}
+                  helper="Biaya pickup & delivery per pesanan."
+                />
+                <SettingInput
+                  id="settings-estimasi-pickup"
+                  label="Estimasi Pickup"
+                  value={settings.estimasiPickup}
+                  onChange={(value) => updateSetting("estimasiPickup", value)}
+                  helper='Contoh: "2 jam", "30 menit".'
+                />
+              </div>
+
               <div className="rounded-[28px] border border-primary-100 bg-primary-50/70 p-4">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div className="min-w-0">
@@ -1248,11 +1363,30 @@ export function AdminSettingsPage({
                                 <span>
                                   Jam: {outlet.jamMulai || "--:--"} - {outlet.jamSelesai || "--:--"}
                                 </span>
-                                <span>
-                                  Koordinat: {outlet.latitude != null && outlet.longitude != null
-                                    ? `${outlet.latitude.toFixed(5)}, ${outlet.longitude.toFixed(5)}`
-                                    : "Belum ada"}
-                                </span>
+                                <button
+                                  type="button"
+                                  title={outlet.isTutupSementara ? "Buka outlet" : "Tutup sementara"}
+                                  onClick={() => void (async () => {
+                                    try {
+                                      await updatePengaturanOutlet({ id_outlet: outlet.id_outlet, isTutupSementara: !outlet.isTutupSementara });
+                                      setOutletRecords((prev) => prev.map((o) =>
+                                        o.id_outlet === outlet.id_outlet
+                                          ? { ...o, isTutupSementara: !outlet.isTutupSementara }
+                                          : o
+                                      ));
+                                    } catch {
+                                      setSaveFeedback({ tone: "error", message: "Gagal mengubah status outlet." });
+                                    }
+                                  })()}
+                                  className={cn(
+                                    "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold transition",
+                                    outlet.isTutupSementara
+                                      ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                                      : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200",
+                                  )}
+                                >
+                                  {outlet.isTutupSementara ? "Tutup Sementara" : "Buka"}
+                                </button>
                               </div>
                             </div>
                             <div className="flex shrink-0 items-center gap-2">
@@ -1296,6 +1430,7 @@ export function AdminSettingsPage({
 
           {isPromoSection ? (
             <>
+              <AddonManagementPanel />
               <PromoCodesPanel
                 campaigns={promoCampaigns}
                 onEdit={editPromoCampaign}
@@ -1442,7 +1577,97 @@ export function AdminSettingsPage({
                   )
                 }
               />
+              <SettingInput
+                label="Kapasitas Harian"
+                type="number"
+                value={editOutletDraft.maxKapasitas}
+                onChange={(value) =>
+                  setEditOutletDraft((current) =>
+                    current ? { ...current, maxKapasitas: value } : current,
+                  )
+                }
+                helper="Maks. pesanan per hari."
+              />
+              <SettingInput
+                label="Nama Bank"
+                value={editOutletDraft.namaBank}
+                onChange={(value) =>
+                  setEditOutletDraft((current) =>
+                    current ? { ...current, namaBank: value } : current,
+                  )
+                }
+                helper='Contoh: BCA, BRI, Mandiri.'
+              />
+              <SettingInput
+                label="Nomor Rekening"
+                value={editOutletDraft.nomorRekening}
+                onChange={(value) =>
+                  setEditOutletDraft((current) =>
+                    current ? { ...current, nomorRekening: value } : current,
+                  )
+                }
+              />
+              <SettingInput
+                className="md:col-span-2"
+                label="Atas Nama"
+                value={editOutletDraft.atasNama}
+                onChange={(value) =>
+                  setEditOutletDraft((current) =>
+                    current ? { ...current, atasNama: value } : current,
+                  )
+                }
+              />
             </div>
+
+            {/* QRIS Upload */}
+            <div className="space-y-3">
+              <p className="text-sm font-extrabold text-(--odong-text)">Upload QRIS</p>
+              <label className="flex cursor-pointer flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-(--odong-border) bg-(--odong-surface-muted) p-5 transition hover:border-primary-300 hover:bg-primary-50/40">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setQrisFile(file);
+                    const reader = new FileReader();
+                    reader.onload = () => setQrisPreview(reader.result as string);
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                {qrisPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={qrisPreview} alt="Preview QRIS" className="h-32 w-32 rounded-2xl object-contain" />
+                ) : editOutletDraft.qrisUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={editOutletDraft.qrisUrl} alt="QRIS saat ini" className="h-32 w-32 rounded-2xl object-contain" />
+                ) : (
+                  <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-(--odong-surface-soft) text-(--odong-muted)">
+                    <Upload className="h-7 w-7" />
+                  </span>
+                )}
+                <div className="text-center">
+                  <p className="text-sm font-extrabold text-(--odong-text)">
+                    {qrisFile ? qrisFile.name : "Klik untuk pilih gambar QRIS"}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-(--odong-muted)">
+                    PNG, JPG, atau WebP. Gambar akan disimpan ke Supabase Storage.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <ToggleSetting
+              label="Tutup Sementara"
+              description="Outlet tidak akan muncul sebagai pilihan pelanggan saat pickup dijadwalkan."
+              checked={editOutletDraft.isTutupSementara}
+              onChange={(value) =>
+                setEditOutletDraft((current) =>
+                  current ? { ...current, isTutupSementara: value } : current,
+                )
+              }
+            />
 
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button

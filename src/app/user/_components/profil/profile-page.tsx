@@ -18,6 +18,7 @@ import {
   Mail,
   MapPin,
   MessageCircle,
+  Pencil,
   Phone,
   Plus,
   RefreshCw,
@@ -27,16 +28,34 @@ import {
   SlidersHorizontal,
   Smartphone,
   Sparkles,
+  Trash2,
   Truck,
   UserRound,
   Wallet,
   X,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import {
   fetchProfilUser,
   updateProfilUser,
+  fetchAlamatList,
+  addAlamat,
+  updateAlamat,
+  deleteAlamat,
+  setAlamatUtama,
   type ProfilResponse,
+  type AlamatItem,
 } from "@/lib/user-api";
+
+const AlamatMapPicker = dynamic(
+  () => import("./AlamatMapPicker").then((m) => m.AlamatMapPicker),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-52 animate-pulse rounded-2xl bg-[var(--odong-surface-strong)]" />
+    ),
+  },
+);
 import {
   ProfileEmptyState,
   ProfileErrorState,
@@ -67,7 +86,7 @@ const faqItems = [
   },
   {
     q: "Apakah ada biaya pickup?",
-    a: "Gratis untuk transaksi di atas Rp 75.000. Di bawah itu dikenakan biaya Rp 8.000.",
+    a: "Gratis untuk transaksi di atas Rp75.000. Di bawah itu dikenakan biaya Rp8.000.",
   },
   {
     q: "Bagaimana jika pakaian saya hilang atau rusak?",
@@ -377,7 +396,7 @@ function BantuanPanel({ open, onClose }: { open: boolean; onClose: () => void })
       {/* info kontak */}
       <div className="rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-4 py-3 space-y-1.5">
         <p className="text-xs font-extrabold text-[var(--odong-text)]">Info kontak</p>
-        <p className="text-xs text-[var(--odong-muted)]">WhatsApp: 0812-3456-7890 (Senin–Sabtu, 08.00–21.00)</p>
+        <p className="text-xs text-[var(--odong-muted)]">WhatsApp: 0812-3456-7890 (Senin–Sabtu, 08.00-21.00 WIB)</p>
         <p className="text-xs text-[var(--odong-muted)]">Email: support@laundrysantuy.app</p>
         <p className="text-xs text-[var(--odong-muted)]">Instagram: @laundrysantuy</p>
       </div>
@@ -434,6 +453,14 @@ export function ProfilePage({ status: propStatus = "ready" }: ProfilePageProps) 
   const [draft, setDraft]             = useState({ nama: "", no_telepon: "", alamat: "" });
   const [saving, setSaving]           = useState(false);
   const [saveError, setSaveError]     = useState<string | null>(null);
+  const [alamatList, setAlamatList]       = useState<AlamatItem[]>([]);
+  const [alamatLoading, setAlamatLoading] = useState(true);
+  const [alamatFormOpen, setAlamatFormOpen] = useState(false);
+  const [alamatEditId, setAlamatEditId]   = useState<string | null>(null);
+  const [alamatDraft, setAlamatDraft]     = useState({ label: "", alamat: "", lat: null as number | null, lng: null as number | null });
+  const [alamatSaving, setAlamatSaving]   = useState(false);
+  const [alamatSaveError, setAlamatSaveError] = useState<string | null>(null);
+  const [alamatDeleteId, setAlamatDeleteId] = useState<string | null>(null);
 
   const loadProfil = () => {
     fetchProfilUser()
@@ -441,7 +468,15 @@ export function ProfilePage({ status: propStatus = "ready" }: ProfilePageProps) 
       .catch(() => setPageStatus("error"));
   };
 
-  useEffect(() => { loadProfil(); }, []);
+  const loadAlamat = () => {
+    setAlamatLoading(true);
+    fetchAlamatList()
+      .then((res) => setAlamatList(res.alamat))
+      .catch(() => setAlamatList([]))
+      .finally(() => setAlamatLoading(false));
+  };
+
+  useEffect(() => { loadProfil(); loadAlamat(); }, []);
 
   const effectiveStatus = propStatus !== "ready" ? propStatus : pageStatus;
   if (effectiveStatus === "loading") return <ProfileLoadingState />;
@@ -473,6 +508,61 @@ export function ProfilePage({ status: propStatus = "ready" }: ProfilePageProps) 
       setSaveError(err instanceof Error ? err.message : "Gagal menyimpan profil.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openAddAlamat = () => {
+    setAlamatEditId(null);
+    setAlamatDraft({ label: "Rumah", alamat: "", lat: null, lng: null });
+    setAlamatSaveError(null);
+    setAlamatFormOpen(true);
+  };
+
+  const openEditAlamat = (item: AlamatItem) => {
+    setAlamatEditId(item.id);
+    setAlamatDraft({ label: item.label, alamat: item.alamat, lat: item.lat ?? null, lng: item.lng ?? null });
+    setAlamatSaveError(null);
+    setAlamatFormOpen(true);
+  };
+
+  const handleSaveAlamat = async () => {
+    if (!alamatDraft.alamat.trim()) { setAlamatSaveError("Alamat tidak boleh kosong."); return; }
+    setAlamatSaving(true);
+    setAlamatSaveError(null);
+    try {
+      if (alamatEditId) {
+        await updateAlamat(alamatEditId, { label: alamatDraft.label, alamat: alamatDraft.alamat, lat: alamatDraft.lat, lng: alamatDraft.lng });
+      } else {
+        await addAlamat({ label: alamatDraft.label, alamat: alamatDraft.alamat, lat: alamatDraft.lat, lng: alamatDraft.lng });
+      }
+      setAlamatFormOpen(false);
+      loadAlamat();
+      loadProfil();
+    } catch (err) {
+      setAlamatSaveError(err instanceof Error ? err.message : "Gagal menyimpan alamat.");
+    } finally {
+      setAlamatSaving(false);
+    }
+  };
+
+  const handleDeleteAlamat = async (id: string) => {
+    try {
+      await deleteAlamat(id);
+      setAlamatDeleteId(null);
+      loadAlamat();
+      loadProfil();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSetUtama = async (id: string) => {
+    try {
+      await setAlamatUtama(id);
+      loadAlamat();
+      loadProfil();
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -533,28 +623,93 @@ export function ProfilePage({ status: propStatus = "ready" }: ProfilePageProps) 
             <section className="rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-6 shadow-[0_18px_46px_rgba(25,28,29,0.07)] backdrop-blur-xl">
               <p className="text-sm font-semibold text-primary-700">Alamat Saya</p>
               <h2 className="mt-1 text-xl font-extrabold text-[var(--odong-text)]">Lokasi pickup</h2>
-              <div className="mt-4 rounded-3xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-4">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-neutral-900 text-white">
-                    <Home className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-sm font-extrabold text-[var(--odong-text)]">Rumah Utama</h3>
-                      <span className="rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-extrabold text-primary-700">Utama</span>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-[var(--odong-muted)]">
-                      {profilCard?.alamat ?? alamat?.alamat ?? "Alamat belum diatur"}
-                    </p>
-                    <p className="mt-2 flex items-start gap-2 text-xs font-semibold leading-5 text-[var(--odong-muted)]">
-                      <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-600" aria-hidden="true" />
-                      Titik penjemputan utama
-                    </p>
+
+              <div className="mt-4 space-y-3">
+                {alamatLoading ? (
+                  <div className="h-20 animate-pulse rounded-3xl bg-[var(--odong-surface-strong)]" />
+                ) : alamatList.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-4 py-5 text-center">
+                    <p className="text-sm font-semibold text-[var(--odong-muted)]">Belum ada alamat tersimpan</p>
+                    <p className="mt-1 text-xs text-[var(--odong-muted)]">Tambahkan alamat agar kurir tahu lokasi penjemputan.</p>
                   </div>
-                </div>
+                ) : (
+                  alamatList.map((item) => (
+                    <div key={item.id} className="rounded-3xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-neutral-900 text-white">
+                          <Home className="h-5 w-5" aria-hidden="true" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-sm font-extrabold text-[var(--odong-text)]">{item.label}</h3>
+                            {item.is_utama && (
+                              <span className="rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-extrabold text-primary-700">Utama</span>
+                            )}
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-[var(--odong-muted)]">{item.alamat}</p>
+                          <p className="mt-2 flex items-start gap-2 text-xs font-semibold leading-5 text-[var(--odong-muted)]">
+                            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-600" aria-hidden="true" />
+                            {item.is_utama ? "Titik penjemputan utama" : "Alamat tersimpan"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--odong-border)] pt-3">
+                        {!item.is_utama && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetUtama(item.id)}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-primary-50 px-3 text-xs font-bold text-primary-700 transition hover:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+                          >
+                            Jadikan Utama
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openEditAlamat(item)}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[var(--odong-border)] bg-[var(--odong-surface)] px-3 text-xs font-bold text-[var(--odong-text)] transition hover:bg-[var(--odong-surface-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+                        >
+                          <Pencil className="h-3 w-3" aria-hidden="true" />
+                          Edit
+                        </button>
+                        {alamatDeleteId === item.id ? (
+                          <span className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-[var(--odong-muted)]">Yakin hapus?</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAlamat(item.id)}
+                              className="inline-flex h-8 items-center gap-1 rounded-xl bg-red-600 px-3 text-xs font-bold text-white transition hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+                            >
+                              Ya, Hapus
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setAlamatDeleteId(null)}
+                              className="inline-flex h-8 items-center px-3 text-xs font-bold text-[var(--odong-muted)] transition hover:text-[var(--odong-text)] focus-visible:outline-none"
+                            >
+                              Batal
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setAlamatDeleteId(item.id)}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-red-100 bg-red-50/80 px-3 text-xs font-bold text-red-600 transition hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200"
+                          >
+                            <Trash2 className="h-3 w-3" aria-hidden="true" />
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
+
               <button
                 type="button"
+                onClick={openAddAlamat}
                 className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-primary-200 bg-primary-50/55 text-sm font-extrabold text-primary-700 transition hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
@@ -603,18 +758,18 @@ export function ProfilePage({ status: propStatus = "ready" }: ProfilePageProps) 
             <button
               type="button"
               onClick={handleLogout}
-              className="group flex w-full items-center justify-between gap-4 rounded-[28px] border border-red-200 dark:border-red-900/50 bg-red-50/80 dark:bg-red-950/20 p-5 text-left shadow-[0_14px_34px_rgba(220,38,38,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-red-50 dark:hover:bg-red-950/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 active:scale-[0.99]"
+              className="group flex w-full items-center justify-between gap-4 rounded-[28px] border border-red-200 bg-white p-5 text-left shadow-[0_14px_34px_rgba(220,38,38,0.07)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-red-300 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 active:scale-[0.99] dark:border-red-900/50 dark:bg-red-950/20 dark:hover:bg-red-950/30"
             >
               <span className="flex min-w-0 items-center gap-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--odong-surface-strong)] text-red-600">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-red-600 transition group-hover:bg-red-100">
                   <LogOut className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-base font-extrabold text-red-700 dark:text-red-400">Keluar</span>
-                  <span className="mt-1 block text-sm leading-6 text-red-500 dark:text-red-500/80">Akhiri sesi dan kembali ke halaman login.</span>
+                  <span className="block text-base font-extrabold text-red-600 dark:text-red-400">Keluar</span>
+                  <span className="mt-1 block text-sm leading-6 text-red-400 dark:text-red-500/80">Akhiri sesi dan kembali ke halaman login.</span>
                 </span>
               </span>
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--odong-surface)] text-red-500 dark:text-red-400 transition group-hover:text-red-700 dark:group-hover:text-red-300">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-red-100 bg-red-50 text-red-400 transition group-hover:border-red-200 group-hover:bg-red-100 group-hover:text-red-600">
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </span>
             </button>
@@ -627,6 +782,73 @@ export function ProfilePage({ status: propStatus = "ready" }: ProfilePageProps) 
       <PembayaranPanel open={activePanel === "pembayaran"} onClose={() => setActivePanel(null)} />
       <PreferensiPanel open={activePanel === "preferensi"} onClose={() => setActivePanel(null)} />
       <BantuanPanel    open={activePanel === "bantuan"}    onClose={() => setActivePanel(null)} />
+
+      {/* ── Address add/edit modal ─────────────────────────────────────────────── */}
+      {alamatFormOpen && (
+        <div role="dialog" aria-modal="true" aria-label={alamatEditId ? "Edit alamat" : "Tambah alamat"} className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => !alamatSaving && setAlamatFormOpen(false)} />
+          <div className="relative w-full max-w-md rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-6 shadow-[0_32px_64px_rgba(25,28,29,0.18)] sm:p-7">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-primary-700">Lokasi Pickup</p>
+                <h2 className="mt-1 text-xl font-extrabold text-[var(--odong-text)]">
+                  {alamatEditId ? "Edit Alamat" : "Tambah Alamat Baru"}
+                </h2>
+              </div>
+              <button type="button" onClick={() => setAlamatFormOpen(false)} disabled={alamatSaving} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-muted)] transition hover:text-[var(--odong-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300">
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+            {alamatSaveError && (
+              <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{alamatSaveError}</div>
+            )}
+            <div className="mt-5 space-y-4">
+              <label className="block space-y-2">
+                <span className="text-sm font-extrabold text-[var(--odong-text)]">Label alamat</span>
+                <input
+                  type="text"
+                  value={alamatDraft.label}
+                  onChange={(e) => setAlamatDraft((d) => ({ ...d, label: e.target.value }))}
+                  placeholder="contoh: Rumah, Kantor, Kos"
+                  className="block w-full rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-4 py-3 text-sm font-semibold text-[var(--odong-text)] outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-100"
+                />
+              </label>
+
+              <div className="space-y-2">
+                <span className="block text-sm font-extrabold text-[var(--odong-text)]">Titik lokasi</span>
+                <AlamatMapPicker
+                  initialLat={alamatDraft.lat}
+                  initialLng={alamatDraft.lng}
+                  onLocationChange={(lat, lng, alamat) =>
+                    setAlamatDraft((d) => ({ ...d, lat, lng, alamat: alamat || d.alamat }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <span className="block text-sm font-extrabold text-[var(--odong-text)]">Alamat lengkap</span>
+                <textarea
+                  value={alamatDraft.alamat}
+                  rows={3}
+                  readOnly
+                  placeholder="Klik pada peta untuk mengisi alamat otomatis..."
+                  className="block w-full resize-none rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-4 py-3 text-sm font-semibold text-[var(--odong-text)] outline-none cursor-default select-none opacity-80"
+                />
+                {!alamatDraft.alamat && (
+                  <p className="text-[11px] text-amber-600 font-semibold">Tap pada peta untuk menentukan titik lokasi.</p>
+                )}
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setAlamatFormOpen(false)} disabled={alamatSaving} className="inline-flex h-11 items-center justify-center gap-2 rounded-[20px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-5 text-sm font-bold text-[var(--odong-text)] transition hover:bg-[var(--odong-surface-muted)] disabled:opacity-60">Batal</button>
+              <button type="button" onClick={handleSaveAlamat} disabled={alamatSaving} className="inline-flex h-11 items-center justify-center gap-2 rounded-[20px] bg-primary-600 px-5 text-sm font-bold text-white transition hover:bg-primary-700 active:scale-[0.98] disabled:opacity-60">
+                {alamatSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {alamatSaving ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Edit profil modal ────────────────────────────────────────────── */}
       {editOpen && (
@@ -647,18 +869,20 @@ export function ProfilePage({ status: propStatus = "ready" }: ProfilePageProps) 
             )}
             <div className="mt-5 space-y-4">
               {[
-                { label: "Nama lengkap", type: "text",  val: draft.nama,         set: (v: string) => setDraft((d) => ({ ...d, nama: v })) },
-                { label: "No. telepon",  type: "tel",   val: draft.no_telepon,   set: (v: string) => setDraft((d) => ({ ...d, no_telepon: v })) },
+                { label: "Nama lengkap", type: "text", val: draft.nama,       set: (v: string) => setDraft((d) => ({ ...d, nama: v })) },
+                { label: "No. telepon",  type: "tel",  val: draft.no_telepon, set: (v: string) => setDraft((d) => ({ ...d, no_telepon: v })) },
               ].map(({ label, type, val, set }) => (
                 <label key={label} className="block space-y-2">
                   <span className="text-sm font-extrabold text-[var(--odong-text)]">{label}</span>
                   <input type={type} value={val} onChange={(e) => set(e.target.value)} className="block w-full rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-4 py-3 text-sm font-semibold text-[var(--odong-text)] outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-100" />
                 </label>
               ))}
-              <label className="block space-y-2">
-                <span className="text-sm font-extrabold text-[var(--odong-text)]">Alamat pickup</span>
-                <textarea value={draft.alamat} rows={3} onChange={(e) => setDraft((d) => ({ ...d, alamat: e.target.value }))} placeholder="Masukkan alamat lengkap..." className="block w-full resize-none rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-4 py-3 text-sm font-semibold text-[var(--odong-text)] outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-100" />
-              </label>
+              <div className="flex items-start gap-3 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+                <p className="text-xs leading-5 text-amber-700">
+                  Alamat pickup diatur lewat bagian <span className="font-bold">Alamat Saya</span> di bawah — klik pin di peta untuk menentukan titik lokasi.
+                </p>
+              </div>
             </div>
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button type="button" onClick={() => setEditOpen(false)} disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-[20px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-5 text-sm font-bold text-[var(--odong-text)] transition hover:bg-[var(--odong-surface-muted)] disabled:opacity-60">Batal</button>

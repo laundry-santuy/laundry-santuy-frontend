@@ -1,6 +1,6 @@
 import {
   ArrowRight,
-  CheckCircle2,
+  ChevronDown,
   MessageSquareText,
   ShieldCheck,
   Truck,
@@ -67,132 +67,110 @@ export function OrderSummary({
 }: OrderSummaryProps) {
   return (
     <aside className="h-full" aria-label="Konfirmasi pesanan">
-      <section className="flex h-full flex-col rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-5 shadow-[0_20px_50px_rgba(25,28,29,0.08)] backdrop-blur-xl sm:p-6">
-        <div className="flex items-start justify-between gap-4">
+      <section className="flex h-full flex-col rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface)] shadow-[0_20px_50px_rgba(25,28,29,0.08)] backdrop-blur-xl">
+
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between gap-4 border-b border-[var(--odong-border)] px-6 py-5">
           <div>
-            <p className="text-sm font-semibold text-primary-700">Checkout</p>
-            <h2 className="mt-1 text-2xl font-extrabold text-[var(--odong-text)]">
+            <p className="text-xs font-bold uppercase tracking-[0.08em] text-primary-600">Checkout</p>
+            <h2 className="mt-1 text-xl font-extrabold text-[var(--odong-text)]">
               Konfirmasi Pesanan
             </h2>
           </div>
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-600 text-white">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary-600 text-white">
             <Truck className="h-5 w-5" aria-hidden="true" />
           </span>
         </div>
 
-        {submitted ? (
-          <div className="mt-5 rounded-2xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-semibold text-primary-700">
-            <CheckCircle2 className="mr-2 inline h-4 w-4" aria-hidden="true" />
-            Draft order siap dikonfirmasi.
-          </div>
-        ) : null}
+        <div className="flex flex-1 flex-col gap-0 overflow-y-auto">
 
-        <div className="mt-5 flex flex-1 flex-col gap-5">
-          <div className="border-b border-[var(--odong-border)] pb-5">
-            <p className="text-sm font-extrabold text-[var(--odong-text)]">
-              {service.name}
-            </p>
+          {/* ── Layanan ── */}
+          <div className="border-b border-[var(--odong-border)] px-6 py-4">
+            <p className="text-sm font-extrabold text-[var(--odong-text)]">{service.name}</p>
             <p className="mt-1 text-sm text-[var(--odong-muted)]">
-              {formatQuantity(quantity)} {service.unit} - estimasi {service.eta}
+              {formatQuantity(quantity)} {service.unit} — estimasi {service.eta}
             </p>
           </div>
 
-          <div className="grid gap-4 border-b border-[var(--odong-border)] pb-5 text-sm">
+          {/* ── Pickup & Alamat ── */}
+          <div className="grid gap-4 border-b border-[var(--odong-border)] px-6 py-4 text-sm">
             <div>
               <p className="font-bold text-[var(--odong-text)]">Pickup</p>
               <p className="mt-1 text-[var(--odong-muted)]">
-                {slot ? `${slot.day}, ${slot.date} - ${slot.window}` : "-"}
+                {slot ? `${slot.day}, ${slot.date} · ${slot.window}` : "—"}
               </p>
             </div>
             <div>
               <p className="font-bold text-[var(--odong-text)]">Alamat</p>
-              <p className="mt-1 leading-6 text-[var(--odong-muted)]">
-                {address ? address.address : "-"}
+              <p className="mt-1 max-h-[4.5rem] overflow-y-auto leading-6 text-[var(--odong-muted)] [scrollbar-width:thin]">
+                {address?.address || "—"}
               </p>
             </div>
           </div>
 
-          <fieldset>
-            <legend className="text-sm font-bold text-[var(--odong-text)]">
-              Metode pembayaran
-            </legend>
-            <div className="mt-3 grid gap-2">
-              {payments.map((paymentOption) => {
-                const Icon = paymentOption.icon;
-                const selected = paymentOption.id === selectedPaymentId;
-
-                return (
-                  <button
-                    key={paymentOption.id}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => onSelectPayment(paymentOption.id)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.99]",
-                      selected
-                        ? "border-primary-200 bg-primary-50 text-primary-700"
-                        : "border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-text)] hover:border-primary-100",
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span>
-                      <span className="block text-sm font-extrabold">
-                        {paymentOption.label}
-                      </span>
-                      <span className="mt-0.5 block text-xs opacity-70">
-                        {paymentOption.description}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
+          {/* ── Metode Pembayaran ── */}
+          <div className="border-b border-[var(--odong-border)] px-6 py-4">
+            <p className="text-sm font-bold text-[var(--odong-text)]">Metode pembayaran</p>
+            <div className="relative mt-3">
+              <select
+                value={selectedPaymentId}
+                onChange={(e) => onSelectPayment(e.target.value)}
+                className="w-full appearance-none rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] py-3 pl-4 pr-10 text-sm font-semibold text-[var(--odong-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              >
+                <option value="" disabled>Pilih metode…</option>
+                {payments.map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--odong-muted)]"
+                aria-hidden="true"
+              />
             </div>
-            <p className="mt-2 text-xs text-[var(--odong-muted)]">
-              Terpilih: {payment ? payment.label : "-"}
-            </p>
-          </fieldset>
+            {payment && (
+              <p className="mt-2 text-xs text-[var(--odong-muted)]">{payment.description}</p>
+            )}
+          </div>
 
-          <div>
+          {/* ── Catatan Kurir ── */}
+          <div className="border-b border-[var(--odong-border)] px-6 py-4">
             <label
               htmlFor="order-note"
               className="flex items-center gap-2 text-sm font-bold text-[var(--odong-text)]"
             >
-              <MessageSquareText
-                className="h-4 w-4 text-primary-600"
-                aria-hidden="true"
-              />
+              <MessageSquareText className="h-4 w-4 text-primary-600" aria-hidden="true" />
               Catatan kurir
             </label>
             <textarea
               id="order-note"
               value={note}
-              onChange={(event) => onNoteChange(event.target.value)}
-              rows={4}
+              onChange={(e) => onNoteChange(e.target.value)}
+              rows={3}
               placeholder="Contoh: pakaian putih dipisah, jemput di lobby utama."
               className="mt-3 w-full resize-none rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-4 py-3 text-sm leading-6 text-[var(--odong-text)] outline-none transition placeholder:text-[var(--odong-muted-soft)] focus:border-primary-200 focus:ring-2 focus:ring-primary-200"
             />
           </div>
 
-          <div className="space-y-3 border-b border-[var(--odong-border)] pb-5">
-            <SummaryRow label="Subtotal" value={formatCurrency(subtotal)} />
-            <SummaryRow
-              label="Pickup"
-              value={pickupFee > 0 ? formatCurrency(pickupFee) : "Gratis"}
-            />
-            <SummaryRow
-              label="Promo"
-              value={discount > 0 ? `-${formatCurrency(discount)}` : "-"}
-              valueClassName={discount > 0 ? "text-primary-700" : undefined}
-            />
-          </div>
+          {/* ── Rincian Harga ── */}
+          <div className="px-6 py-4">
+            <div className="space-y-2.5">
+              <SummaryRow label="Subtotal" value={formatCurrency(subtotal)} />
+              <SummaryRow
+                label="Pickup"
+                value={pickupFee > 0 ? formatCurrency(pickupFee) : "Gratis"}
+                valueClassName={pickupFee === 0 ? "text-emerald-600" : undefined}
+              />
+              <SummaryRow
+                label="Promo"
+                value={discount > 0 ? `–${formatCurrency(discount)}` : "–"}
+                valueClassName={discount > 0 ? "text-primary-600" : undefined}
+              />
+            </div>
 
-          <div className="mt-auto">
-            <div className="flex items-end justify-between gap-4">
+            <div className="mt-4 flex items-end justify-between gap-4 border-t border-[var(--odong-border)] pt-4">
               <div>
-                <p className="text-sm font-semibold text-[var(--odong-muted)]">
-                  Total estimasi
-                </p>
-                <p className="mt-1 text-xs text-[var(--odong-muted-soft)]">
+                <p className="text-sm font-semibold text-[var(--odong-muted)]">Total estimasi</p>
+                <p className="mt-0.5 text-xs text-[var(--odong-muted-soft)]">
                   Final setelah penimbangan outlet.
                 </p>
               </div>
@@ -201,8 +179,8 @@ export function OrderSummary({
               </p>
             </div>
 
-            {selectedAddOns.length > 0 ? (
-              <div className="mt-4 flex flex-wrap gap-2">
+            {selectedAddOns.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {selectedAddOns.map((addOn) => (
                   <span
                     key={addOn.id}
@@ -212,26 +190,31 @@ export function OrderSummary({
                   </span>
                 ))}
               </div>
-            ) : null}
+            )}
+          </div>
 
+          {/* ── CTA ── */}
+          <div className="mt-auto border-t border-[var(--odong-border)] px-6 py-5">
             <button
               type="submit"
               form="laundry-order-form"
               disabled={!canSubmit}
-              className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary-600 px-5 text-sm font-bold text-white shadow-[0_14px_26px_rgba(0,88,202,0.22)] transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:shadow-none disabled:hover:translate-y-0"
+              className={cn(
+                "inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl px-5 text-sm font-bold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]",
+                canSubmit
+                  ? "bg-primary-600 shadow-[0_14px_26px_rgba(0,88,202,0.22)] hover:-translate-y-0.5 hover:bg-primary-700"
+                  : "cursor-not-allowed bg-neutral-300 shadow-none hover:translate-y-0",
+              )}
             >
-              Konfirmasi Order
+              Konfirmasi Pembayaran
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </button>
-
-            <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-[var(--odong-muted)]">
-              <ShieldCheck
-                className="mt-0.5 h-4 w-4 shrink-0 text-primary-600"
-                aria-hidden="true"
-              />
+            <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-[var(--odong-muted)]">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" aria-hidden="true" />
               Harga dan jadwal akan dikunci setelah outlet menerima order.
             </p>
           </div>
+
         </div>
       </section>
     </aside>
@@ -250,12 +233,7 @@ function SummaryRow({
   return (
     <div className="flex items-center justify-between gap-4 text-sm">
       <span className="text-[var(--odong-muted)]">{label}</span>
-      <span
-        className={cn(
-          "font-bold text-[var(--odong-text)]",
-          valueClassName,
-        )}
-      >
+      <span className={cn("font-bold text-[var(--odong-text)]", valueClassName)}>
         {value}
       </span>
     </div>

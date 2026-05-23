@@ -13,6 +13,7 @@ export type CourierInfo = {
   rating: number;
   vehicle: string;
   distance: string;
+  noTelepon: string | null;
 };
 
 export type ActiveOrder = {

@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 const AUTO_SLIDE_DELAY = 4500;
 
 export function PromoBanner() {
-  const { campaigns } = usePromoCampaigns();
+  const { campaigns, loading } = usePromoCampaigns();
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [claimedCode, setClaimedCode] = useState<string | null>(null);
@@ -59,8 +59,21 @@ export function PromoBanner() {
 
   const activePromo = promoItems[safeActiveIndex];
 
+  if (loading) {
+    return (
+      <div className="h-[80px] animate-pulse rounded-[24px] bg-primary-100/60" />
+    );
+  }
+
   if (!activePromo) {
-    return null;
+    return (
+      <section className="flex items-center gap-3 rounded-[24px] border border-dashed border-primary-200 bg-primary-50/50 px-5 py-4">
+        <Sparkles className="h-4 w-4 shrink-0 text-primary-300" aria-hidden="true" />
+        <p className="text-sm font-semibold text-neutral-400">
+          Tidak ada promo tersedia saat ini
+        </p>
+      </section>
+    );
   }
 
   return (

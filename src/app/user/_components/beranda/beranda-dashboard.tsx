@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ArrowRight,
   CalendarClock,
@@ -73,6 +73,7 @@ function mapActiveOrder(raw: NonNullable<BerandaResponse["pesananAktif"]>): Acti
           rating: raw.kurir.rating,
           vehicle: `${raw.kurir.kendaraan} ${raw.kurir.noPolisi}`.trim(),
           distance: "Kurir aktif",
+          noTelepon: raw.kurir.noTelepon ?? null,
         }
       : null,
     courierInitials: buildInitials(raw.kurir?.nama),
@@ -95,51 +96,51 @@ function mapRecentOrders(raw: BerandaResponse["pesananTerbaru"]): RecentOrder[] 
   });
 }
 
-const serviceCards = [
-  {
-    title: "Cuci Kiloan",
-    description: "Pakaian harian bersih dan wangi tanpa perlu ribet.",
-    price: "Mulai Rp7.000/kg",
-    eta: "2-3 hari",
-    icon: Shirt,
-  },
-  {
-    title: "Cuci + Setrika",
-    description: "Siap masuk lemari dengan lipatan rapi dan fresh.",
-    price: "Mulai Rp10.000/kg",
-    eta: "2 hari",
-    icon: Sparkles,
-  },
-  {
-    title: "Express",
-    description: "Laundry cepat untuk kebutuhan mendadak hari ini.",
-    price: "Mulai Rp18.000/kg",
-    eta: "6-12 jam",
-    icon: Clock,
-  },
-  {
-    title: "Bedding Care",
-    description: "Seprei, bed cover, dan selimut dicuci lebih higienis.",
-    price: "Mulai Rp25.000/item",
-    eta: "2-3 hari",
-    icon: Package,
-  },
-];
+type LayananCard = {
+  id: string;
+  title: string;
+  description: string;
+  price: string;
+  eta: string;
+  icon: React.ElementType;
+};
+
+function resolveLayananIcon(nama: string, tipe: string): React.ElementType {
+  const n = nama.toLowerCase();
+  const t = (tipe ?? "").toLowerCase();
+  if (t.includes("express") || t.includes("kilat") || n.includes("express") || n.includes("kilat")) return Clock;
+  if (n.includes("setrika") || n.includes("ironing")) return Sparkles;
+  if (n.includes("bedding") || n.includes("seprei") || n.includes("selimut") || n.includes("bed")) return Package;
+  return Shirt;
+}
+
+function mapLayananToCard(s: NonNullable<BerandaResponse["layananPopuler"]>[number]): LayananCard {
+  const harga = (s.harga ?? 0).toLocaleString("id-ID");
+  const satuan = s.satuan ?? "kg";
+  return {
+    id:          s.id_layanan,
+    title:       s.nama,
+    description: s.deskripsi ?? `Layanan ${s.nama.toLowerCase()} berkualitas.`,
+    price:       `Mulai Rp${harga}/${satuan}`,
+    eta:         s.durasi ?? "2-3 hari",
+    icon:        resolveLayananIcon(s.nama, s.tipe),
+  };
+}
 
 const workflowItems = [
   {
     title: "Pilih layanan",
-    description: "Tentukan jenis laundry dan jadwal jemput.",
+    description: "Pilih outlet, layanan, dan jadwal penjemputan.",
     icon: CalendarClock,
   },
   {
     title: "Kurir menjemput",
-    description: "Pakaian kamu dijemput sesuai alamat.",
+    description: "Kurir datang ke alamatmu sesuai jadwal yang dipilih.",
     icon: Truck,
   },
   {
-    title: "Pantau proses",
-    description: "Lacak status laundry sampai selesai.",
+    title: "Terima cucian bersih",
+    description: "Pantau proses dan terima cucian bersih langsung di rumah.",
     icon: MapPin,
   },
 ];
@@ -153,7 +154,9 @@ export function BerandaDashboard() {
     fetchBeranda()
       .then((data) => {
         setApiData(data);
-        setStatus(data.pesananTerbaru.length === 0 && !data.pesananAktif ? "empty" : "ready");
+        // Always show the dashboard if the user has no address yet (so the banner is visible)
+        const hasActivity = data.pesananTerbaru.length > 0 || !!data.pesananAktif;
+        setStatus(hasActivity || !data.profilPengguna.alamat ? "ready" : "empty");
       })
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
@@ -180,6 +183,19 @@ export function BerandaDashboard() {
       </div>
 
       <div className="relative z-10 space-y-6">
+        {!apiData?.profilPengguna.alamat && (
+          <Link
+            href="/user/profil"
+            className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+          >
+            <MapPin className="h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-amber-800">Alamat pickup belum diatur</p>
+              <p className="text-xs leading-5 text-amber-600">Atur alamat di profil agar kurir tahu lokasi penjemputan kamu.</p>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+          </Link>
+        )}
         <section className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_380px] lg:items-stretch">
           <div className="odong-surface relative overflow-hidden rounded-[28px] border border-[var(--odong-border)] p-6 shadow-[0_20px_50px_rgba(25,28,29,0.08)] backdrop-blur-xl sm:p-8">
             <div className="absolute right-[-80px] top-[-90px] h-64 w-64 rounded-full bg-primary-200/35 blur-3xl" />
@@ -215,11 +231,16 @@ export function BerandaDashboard() {
               </div>
 
               <div className="mt-7 grid gap-3 sm:grid-cols-3">
-                {[
-                  ["4.8/5", "Rating kurir"],
-                  ["2 jam", "Estimasi pickup"],
+                {([
+                  [
+                    apiData?.statsBeranda?.ratingKurir != null
+                      ? `${apiData.statsBeranda.ratingKurir}/5`
+                      : "4.8/5",
+                    "Rating kurir",
+                  ],
+                  [apiData?.statsBeranda?.estimasiPickup ?? "2 jam", "Estimasi pickup"],
                   ["24/7", "Pantau order"],
-                ].map(([value, label]) => (
+                ] as [string, string][]).map(([value, label]) => (
                   <div
                     key={label}
                     className="odong-surface-soft rounded-2xl border border-primary-100/70 bg-primary-50/70 px-4 py-3"
@@ -307,37 +328,44 @@ export function BerandaDashboard() {
         <PromoBanner />
 
         <section className="space-y-3">
-          <SectionHeader title="Layanan Favorit" actionLabel="Order sekarang" href="/user/pesan" />
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {serviceCards.map((service) => {
-              const Icon = service.icon;
-              return (
-                <article
-                  key={service.title}
-                  className="odong-surface-soft group rounded-[24px] border border-[var(--odong-border)] p-5 shadow-[0_14px_34px_rgba(25,28,29,0.045)] transition hover:-translate-y-1 hover:bg-[var(--odong-surface-strong)] hover:shadow-[0_20px_44px_rgba(25,28,29,0.075)]"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 transition group-hover:bg-primary-600 group-hover:text-white">
-                    <Icon className="h-6 w-6" aria-hidden="true" />
-                  </div>
-                  <h3 className="odong-text mt-4 text-lg font-extrabold text-neutral-900">{service.title}</h3>
-                  <p className="odong-muted mt-2 min-h-[48px] text-sm leading-6 text-neutral-500">{service.description}</p>
-                  <div className="mt-4 flex items-end justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-bold text-primary-700">{service.price}</p>
-                      <p className="mt-1 text-xs text-neutral-400">Estimasi {service.eta}</p>
+          <SectionHeader title="Layanan Tersedia" actionLabel="Order sekarang" href="/user/pesan" />
+          {(apiData?.layananPopuler ?? []).length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-neutral-200 px-5 py-4 text-sm font-semibold text-neutral-400">
+              Belum ada layanan tersedia
+            </p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {(apiData?.layananPopuler ?? []).map((raw) => {
+                const service = mapLayananToCard(raw);
+                const Icon = service.icon;
+                return (
+                  <article
+                    key={service.id}
+                    className="odong-surface-soft group rounded-[24px] border border-[var(--odong-border)] p-5 shadow-[0_14px_34px_rgba(25,28,29,0.045)] transition hover:-translate-y-1 hover:bg-[var(--odong-surface-strong)] hover:shadow-[0_20px_44px_rgba(25,28,29,0.075)]"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 transition group-hover:bg-primary-600 group-hover:text-white">
+                      <Icon className="h-6 w-6" aria-hidden="true" />
                     </div>
-                    <Link
-                      href="/user/pesan"
-                      aria-label={`Pesan ${service.title}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-white transition group-hover:bg-primary-600"
-                    >
-                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                    </Link>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                    <h3 className="odong-text mt-4 text-lg font-extrabold text-neutral-900">{service.title}</h3>
+                    <p className="odong-muted mt-2 min-h-[48px] text-sm leading-6 text-neutral-500">{service.description}</p>
+                    <div className="mt-4 flex items-end justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-primary-700">{service.price}</p>
+                        <p className="mt-1 text-xs text-neutral-400">Estimasi {service.eta}</p>
+                      </div>
+                      <Link
+                        href={`/user/pesan?layanan=${raw.id_layanan}`}
+                        aria-label={`Pesan ${service.title}`}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-white transition group-hover:bg-primary-600"
+                      >
+                        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section className="odong-surface-soft rounded-[28px] border border-[var(--odong-border)] p-5 shadow-[0_14px_34px_rgba(25,28,29,0.045)] sm:p-6">

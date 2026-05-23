@@ -1,59 +1,55 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Clock, Mail, MapPin, Phone, Shirt } from "lucide-react";
 import Link from "next/link";
+import { fetchBeranda } from "@/lib/user-api";
 
-const footerNavigation = [
-  {
-    title: "Navigasi",
-    links: [
-      { label: "Beranda", href: "/user/beranda" },
-      { label: "Order", href: "/user/pesan" },
-      { label: "Lacak", href: "/user/lacak" },
-      { label: "Riwayat", href: "/user/riwayat" },
-    ],
-  },
-  {
-    title: "Layanan",
-    links: [
-      { label: "Cuci Kiloan", href: "/user/pesan" },
-      { label: "Cuci + Setrika", href: "/user/pesan" },
-      { label: "Express", href: "/user/pesan" },
-      { label: "Bedding Care", href: "/user/pesan" },
-    ],
-  },
-  {
-    title: "Bantuan",
-    links: [
-      { label: "Profil", href: "/user/profil" },
-      { label: "Pengaturan", href: "/user/pengaturan" },
-      { label: "Login", href: "/auth/login/user" },
-      { label: "Daftar", href: "/auth/daftar/user" },
-    ],
-  },
+const navLinks = [
+  { label: "Beranda", href: "/user/beranda" },
+  { label: "Buat Order", href: "/user/pesan" },
+  { label: "Lacak Pesanan", href: "/user/lacak" },
+  { label: "Riwayat", href: "/user/riwayat" },
+];
+
+const akunLinks = [
+  { label: "Profil Saya", href: "/user/profil" },
+  { label: "Alamat Saya", href: "/user/profil" },
+  { label: "Pengaturan", href: "/user/pengaturan" },
 ];
 
 const contactItems = [
-  {
-    label: "Jl. Santuy No. 24, Jakarta",
-    icon: MapPin,
-  },
-  {
-    label: "0812-3456-7890",
-    icon: Phone,
-  },
-  {
-    label: "hello@laundrysantuy.id",
-    icon: Mail,
-  },
-  {
-    label: "Setiap hari, 08.00-21.00 WIB",
-    icon: Clock,
-  },
+  { label: "Jl. Santuy No. 24, Jakarta", icon: MapPin },
+  { label: "0812-3456-7890", icon: Phone },
+  { label: "hello@laundrysantuy.id", icon: Mail },
+  { label: "Setiap hari, 08.00-21.00 WIB", icon: Clock },
 ];
 
+type LayananItem = { id: string; nama: string };
+
+const LINK_CLASS =
+  "text-sm font-medium text-[var(--odong-muted)] transition hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300";
+
 export function UserFooter() {
+  const [layanan, setLayanan] = useState<LayananItem[]>([]);
+
+  useEffect(() => {
+    fetchBeranda()
+      .then((d) =>
+        setLayanan(
+          d.layananPopuler.slice(0, 5).map((l) => ({
+            id: l.id_layanan,
+            nama: l.nama,
+          })),
+        ),
+      )
+      .catch(() => {});
+  }, []);
+
   return (
     <footer className="relative z-10 mt-10 border-t border-[var(--odong-border)] bg-[var(--odong-surface)] backdrop-blur-xl">
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.25fr_2fr] lg:px-8">
+        {/* Brand + contact */}
         <div>
           <Link href="/user/beranda" className="inline-flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-neutral-700 to-neutral-900 text-white">
@@ -76,13 +72,9 @@ export function UserFooter() {
           <div className="mt-5 grid gap-2 text-sm text-[var(--odong-muted)]">
             {contactItems.map((item) => {
               const Icon = item.icon;
-
               return (
                 <p key={item.label} className="flex items-start gap-2">
-                  <Icon
-                    className="mt-0.5 h-4 w-4 shrink-0 text-primary-600"
-                    aria-hidden="true"
-                  />
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" aria-hidden="true" />
                   <span>{item.label}</span>
                 </p>
               );
@@ -90,26 +82,61 @@ export function UserFooter() {
           </div>
         </div>
 
+        {/* Nav columns */}
         <div className="grid gap-6 sm:grid-cols-3">
-          {footerNavigation.map((group) => (
-            <nav key={group.title} aria-label={group.title}>
-              <h2 className="text-sm font-extrabold text-[var(--odong-text)]">
-                {group.title}
-              </h2>
-              <ul className="mt-4 space-y-3">
-                {group.links.map((link) => (
-                  <li key={link.href + link.label}>
+          {/* Navigasi */}
+          <nav aria-label="Navigasi">
+            <h2 className="text-sm font-extrabold text-[var(--odong-text)]">Navigasi</h2>
+            <ul className="mt-4 space-y-3">
+              {navLinks.map((link) => (
+                <li key={link.href + link.label}>
+                  <Link href={link.href} className={LINK_CLASS}>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Layanan — dari API */}
+          <nav aria-label="Layanan">
+            <h2 className="text-sm font-extrabold text-[var(--odong-text)]">Layanan</h2>
+            <ul className="mt-4 space-y-3">
+              {layanan.length > 0 ? (
+                layanan.map((l) => (
+                  <li key={l.id}>
                     <Link
-                      href={link.href}
-                      className="text-sm font-medium text-[var(--odong-muted)] transition hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+                      href={`/user/pesan?layanan=${l.id}`}
+                      className={LINK_CLASS}
                     >
-                      {link.label}
+                      {l.nama}
                     </Link>
                   </li>
-                ))}
-              </ul>
-            </nav>
-          ))}
+                ))
+              ) : (
+                /* skeleton saat loading */
+                Array.from({ length: 4 }).map((_, i) => (
+                  <li key={i}>
+                    <span className="block h-4 w-24 animate-pulse rounded bg-[var(--odong-border)]" />
+                  </li>
+                ))
+              )}
+            </ul>
+          </nav>
+
+          {/* Akun */}
+          <nav aria-label="Akun">
+            <h2 className="text-sm font-extrabold text-[var(--odong-text)]">Akun</h2>
+            <ul className="mt-4 space-y-3">
+              {akunLinks.map((link) => (
+                <li key={link.href + link.label}>
+                  <Link href={link.href} className={LINK_CLASS}>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </div>
 

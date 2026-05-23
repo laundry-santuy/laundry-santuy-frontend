@@ -84,6 +84,8 @@ export type AdminSettingValues = {
   outletPhone: string;
   pickupRadiusKm: string;
   dailyCapacityKg: string;
+  biayaAntarJemput: string;
+  estimasiPickup: string;
   pricePerKg: string;
   expressSurcharge: string;
   minimumOrder: string;
