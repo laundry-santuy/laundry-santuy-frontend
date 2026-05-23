@@ -8,6 +8,8 @@ import {
 } from "../admin-page";
 import { defaultAdminProfile } from "../data";
 import type { AdminProfileValues } from "../types";
+import { ApiError } from "@/lib/api-client";
+import { fetchProfilAdmin, updateProfilAdmin } from "@/lib/admin-api";
 import {
   BadgeCheck,
   Check,
@@ -17,7 +19,7 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function getInitials(name: string) {
   return (
@@ -35,11 +37,13 @@ function ProfileInput({
   label,
   value,
   type = "text",
+  readOnly = false,
   onChange,
 }: {
   label: string;
   value: string;
   type?: string;
+  readOnly?: boolean;
   onChange: (value: string) => void;
 }) {
   return (
@@ -50,6 +54,7 @@ function ProfileInput({
       <input
         type={type}
         value={value}
+        readOnly={readOnly}
         onChange={(event) => onChange(event.target.value)}
         className={adminControlClass}
       />
@@ -60,8 +65,51 @@ function ProfileInput({
 export function AdminProfilePage() {
   const [profile, setProfile] =
     useState<AdminProfileValues>(defaultAdminProfile);
+  const [outletOptions, setOutletOptions] = useState<Array<{ id: string; nama: string }>>([]);
+  const [selectedOutletId, setSelectedOutletId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const initials = getInitials(profile.name);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+        const response = await fetchProfilAdmin();
+        setProfile({
+          name: response.profil.nama || defaultAdminProfile.name,
+          email: response.profil.email || defaultAdminProfile.email,
+          role: response.profil.role || defaultAdminProfile.role,
+          outlet: response.profil.outletUtama || defaultAdminProfile.outlet,
+        });
+
+        const options = (response.alamatSaya || [])
+          .map((item) => ({ id: item.id, nama: item.nama }))
+          .filter((item) => Boolean(item.id && item.nama));
+
+        setOutletOptions(options);
+
+        if (response.profil.outletUtamaId) {
+          setSelectedOutletId(response.profil.outletUtamaId);
+        } else if (options.length > 0) {
+          setSelectedOutletId(options[0].id);
+        } else {
+          setSelectedOutletId(null);
+        }
+      } catch (error) {
+        const message = error instanceof ApiError ? error.message : "Gagal memuat profil admin.";
+        setLoadError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   const updateProfile = <Key extends keyof AdminProfileValues>(
     key: Key,
@@ -74,9 +122,40 @@ export function AdminProfilePage() {
     }));
   };
 
-  const saveProfile = () => {
-    setSaved(true);
+  const saveProfile = async () => {
+    try {
+      setIsSaving(true);
+      setSaveError(null);
+      await updateProfilAdmin({
+        nama: profile.name,
+        email: profile.email,
+        outletUtamaId: selectedOutletId,
+      });
+      setSaved(true);
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Gagal menyimpan profil admin.";
+      setSaveError(message);
+      setSaved(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="rounded-3xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-6 text-sm font-semibold text-[var(--odong-muted)]">
+        Memuat profil admin...
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="rounded-3xl border border-rose-100 bg-rose-50 p-6 text-sm font-semibold text-rose-700">
+        {loadError}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -87,11 +166,14 @@ export function AdminProfilePage() {
         actions={
           <button
             type="button"
-            onClick={saveProfile}
+            onClick={() => {
+              void saveProfile();
+            }}
+            disabled={isSaving}
             className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(0,88,202,0.2)] transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
           >
             <Save className="h-4 w-4" aria-hidden="true" />
-            Simpan cepat
+            {isSaving ? "Menyimpan..." : "Simpan cepat"}
           </button>
         }
       />
@@ -184,7 +266,7 @@ export function AdminProfilePage() {
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              saveProfile();
+              void saveProfile();
             }}
             className="space-y-6"
           >
@@ -203,13 +285,32 @@ export function AdminProfilePage() {
               <ProfileInput
                 label="Role"
                 value={profile.role}
-                onChange={(value) => updateProfile("role", value)}
+                readOnly
+                onChange={() => {}}
               />
-              <ProfileInput
-                label="Outlet Utama"
-                value={profile.outlet}
-                onChange={(value) => updateProfile("outlet", value)}
-              />
+              <label className="block space-y-2">
+                <span className="text-sm font-extrabold text-[var(--odong-text)]">
+                  Outlet Utama
+                </span>
+                <select
+                  value={selectedOutletId ?? ""}
+                  onChange={(event) => {
+                    const nextId = event.target.value || null;
+                    setSelectedOutletId(nextId);
+                    const selectedOption = outletOptions.find((option) => option.id === nextId);
+                    if (selectedOption) {
+                      updateProfile("outlet", selectedOption.nama);
+                    }
+                  }}
+                  className={adminControlClass}
+                >
+                  {outletOptions.map((outletOption) => (
+                    <option key={outletOption.id} value={outletOption.id}>
+                      {outletOption.nama}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <div className="grid gap-3 rounded-[26px] border border-[var(--odong-border)] bg-[var(--odong-surface-muted)] p-4 md:grid-cols-3">
@@ -260,16 +361,20 @@ export function AdminProfilePage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="submit"
+                disabled={isSaving}
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(0,88,202,0.2)] transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
               >
                 <Save className="h-4 w-4" aria-hidden="true" />
-                Simpan profil
+                {isSaving ? "Menyimpan..." : "Simpan profil"}
               </button>
               {saved ? (
                 <p className="inline-flex items-center gap-2 text-sm font-bold text-emerald-600">
                   <Check className="h-4 w-4" aria-hidden="true" />
                   Profil berhasil disimpan
                 </p>
+              ) : null}
+              {saveError ? (
+                <p className="text-sm font-bold text-rose-600">{saveError}</p>
               ) : null}
             </div>
           </form>

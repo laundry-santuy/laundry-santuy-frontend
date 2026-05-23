@@ -50,6 +50,7 @@ export type ManajemenUserItem = {
   nama: string;
   inisial?: string;
   role: string;
+  roleKey?: 'ADMIN' | 'KURIR' | 'PELANGGAN';
   email: string;
   nomorTelepon: string;
   infoLain: string;
@@ -73,6 +74,48 @@ export type ManajemenUserResponse = {
   };
 };
 
+export type AdminProfilResponse = {
+  profil: {
+    id: string;
+    nama: string;
+    email: string;
+    role: string;
+    outletUtamaId: string | null;
+    outletUtama: string;
+    inisial: string;
+  };
+  stats: {
+    orders: number;
+    ratings: number;
+  };
+  alamatSaya: Array<{
+    id: string;
+    nama: string;
+    alamatLengkap: string;
+  }>;
+};
+
+export type CreateManajemenUserBody = {
+  name: string;
+  email: string;
+  role: 'Admin' | 'Kurir' | 'Pelanggan';
+  password: string;
+  nomorTelepon?: string;
+};
+
+export type UpdateManajemenUserBody = {
+  name?: string;
+  email?: string;
+  role?: 'Admin' | 'Kurir' | 'Pelanggan';
+  nomorTelepon?: string;
+};
+
+export type UpdateAdminProfilBody = {
+  nama?: string;
+  email?: string;
+  outletUtamaId?: string | null;
+};
+
 export type CreateLayananBody = {
   nama_layanan: string;
   satuan: 'kg' | 'item';
@@ -84,6 +127,7 @@ export type CreateLayananBody = {
   min_quantity?: number;
   max_quantity?: number;
   step_quantity?: number;
+  apply_to_all?: boolean;
 };
 
 export type UpdateLayananBody = Partial<CreateLayananBody> & {
@@ -235,6 +279,26 @@ export function fetchDashboard(): Promise<DashboardResponse> {
 
 export function fetchManajemenUser(page = 1, limit = 1000): Promise<ManajemenUserResponse> {
   return apiClient.get<ManajemenUserResponse>(`/api/admin/manajemen-user?page=${page}&limit=${limit}`);
+}
+
+export function createManajemenUser(body: CreateManajemenUserBody): Promise<{ message: string }> {
+  return apiClient.post<{ message: string }>('/api/admin/manajemen-user', body);
+}
+
+export function updateManajemenUser(id: string, body: UpdateManajemenUserBody): Promise<{ message: string }> {
+  return apiClient.patch<{ message: string }>(`/api/admin/manajemen-user/${id}`, body);
+}
+
+export function deleteManajemenUser(id: string): Promise<{ message: string }> {
+  return apiClient.del<{ message: string }>(`/api/admin/manajemen-user/${id}`);
+}
+
+export function fetchProfilAdmin(): Promise<AdminProfilResponse> {
+  return apiClient.get<AdminProfilResponse>('/api/admin/profil');
+}
+
+export function updateProfilAdmin(body: UpdateAdminProfilBody): Promise<{ message: string }> {
+  return apiClient.put<{ message: string }>('/api/admin/profil', body);
 }
 
 // ── Manajemen Pesanan (Admin) ───────────────────────────────────────────────

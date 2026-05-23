@@ -38,6 +38,11 @@ import {
 const yTicks = [0, 15000000, 30000000, 45000000, 60000000];
 const dashboardYears = ["2026", "2025", "2024"] as const;
 
+const monthNames = [
+  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+];
+
 type DashboardYear = (typeof dashboardYears)[number];
 
 const revenueTrendByYear: Record<DashboardYear, typeof revenueTrend> = {
@@ -245,7 +250,13 @@ export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
   
   // Transform backend data to component format
   const activeTrend = data ? data.map(item => ({
-    month: item.month.split('-')[1] || item.month, // Extract month from "2026-05"
+    month: (() => {
+      const monthPart = item.month.split('-')[1];
+      const monthIndex = Number(monthPart) - 1;
+      return Number.isFinite(monthIndex) && monthIndex >= 0 && monthIndex < monthNames.length
+        ? monthNames[monthIndex]
+        : item.month;
+    })(),
     value: item.revenue
   })) : revenueTrendByYear["2026"];
   
