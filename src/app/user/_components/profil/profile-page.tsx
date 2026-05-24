@@ -8,25 +8,18 @@ import {
   ChevronRight,
   CircleDollarSign,
   CreditCard,
-  Eye,
-  EyeOff,
   HelpCircle,
   Home,
-  KeyRound,
-  LockKeyhole,
   LogOut,
   Mail,
   MapPin,
   MessageCircle,
   Pencil,
-  Phone,
   Plus,
   RefreshCw,
   Save,
   Settings2,
-  ShieldCheck,
   SlidersHorizontal,
-  Smartphone,
   Sparkles,
   Trash2,
   Truck,
@@ -66,7 +59,7 @@ import type { ProfilePageStatus } from "./types";
 type ProfilePageProps = { status?: ProfilePageStatus };
 
 // ── Panel types ───────────────────────────────────────────────────────────────
-type ActivePanel = "keamanan" | "pembayaran" | "preferensi" | "bantuan" | null;
+type ActivePanel = "pembayaran" | "preferensi" | "bantuan" | null;
 
 // ── Static data ───────────────────────────────────────────────────────────────
 const paymentMethods = [
@@ -139,122 +132,6 @@ function SettingsModal({
         <div className="p-6 space-y-5">{children}</div>
       </div>
     </div>
-  );
-}
-
-// ── Panel: Keamanan ────────────────────────────────────────────────────────────
-function KeamananPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [showPwForm, setShowPwForm] = useState(false);
-  const [oldPw, setOldPw]   = useState("");
-  const [newPw, setNewPw]   = useState("");
-  const [confirmPw, setConfirmPw] = useState("");
-  const [showOld, setShowOld]   = useState(false);
-  const [showNew, setShowNew]   = useState(false);
-  const [pwError, setPwError]   = useState<string | null>(null);
-  const [pwSuccess, setPwSuccess] = useState(false);
-  const [saving, setSaving]     = useState(false);
-
-  const handleChangePassword = async () => {
-    setPwError(null);
-    if (!oldPw.trim()) { setPwError("Masukkan password lama."); return; }
-    if (newPw.length < 8) { setPwError("Password baru minimal 8 karakter."); return; }
-    if (newPw !== confirmPw) { setPwError("Konfirmasi password tidak cocok."); return; }
-    setSaving(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setSaving(false);
-    setPwSuccess(true);
-    setOldPw(""); setNewPw(""); setConfirmPw("");
-    setTimeout(() => { setPwSuccess(false); setShowPwForm(false); }, 2200);
-  };
-
-  const securityItems = [
-    { icon: Mail,       label: "Email terverifikasi", desc: "Akun aman untuk pemulihan password.", badge: "Aktif" },
-    { icon: Phone,      label: "Nomor HP utama",      desc: "Dipakai untuk konfirmasi pickup.", badge: "Terverifikasi" },
-    { icon: KeyRound,   label: "Password",            desc: "Terakhir diperbarui 2 bulan lalu.", badge: "Aman" },
-    { icon: Smartphone, label: "Perangkat masuk",     desc: "MacBook dan iPhone aktif minggu ini.", badge: "2 perangkat" },
-  ];
-
-  return (
-    <SettingsModal open={open} title="Keamanan" subtitle="Akun & Privasi" icon={LockKeyhole} onClose={onClose}>
-      {/* status items */}
-      <div className="space-y-3">
-        {securityItems.map(({ icon: Icon, label, desc, badge }) => (
-          <div key={label} className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] px-4 py-3">
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <div>
-                <p className="text-sm font-extrabold text-[var(--odong-text)]">{label}</p>
-                <p className="text-xs text-[var(--odong-muted)]">{desc}</p>
-              </div>
-            </div>
-            <span className="shrink-0 rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-bold text-primary-700">{badge}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* change password */}
-      <div className="rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)]">
-        <button
-          type="button"
-          onClick={() => { setShowPwForm((v) => !v); setPwError(null); }}
-          className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-2xl"
-        >
-          <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white">
-              <KeyRound className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <span className="text-sm font-extrabold text-[var(--odong-text)]">Ganti Password</span>
-          </div>
-          <ChevronDown className={`h-4 w-4 text-[var(--odong-muted)] transition-transform ${showPwForm ? "rotate-180" : ""}`} aria-hidden="true" />
-        </button>
-
-        {showPwForm && (
-          <div className="border-t border-[var(--odong-border)] px-4 pb-4 pt-4 space-y-3">
-            {pwError && (
-              <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{pwError}</p>
-            )}
-            {pwSuccess && (
-              <p className="rounded-xl border border-green-100 bg-green-50 px-3 py-2 text-xs font-semibold text-green-700">Password berhasil diperbarui!</p>
-            )}
-            {[
-              { label: "Password lama", val: oldPw, set: setOldPw, show: showOld, toggle: () => setShowOld((v) => !v) },
-              { label: "Password baru", val: newPw, set: setNewPw, show: showNew, toggle: () => setShowNew((v) => !v) },
-              { label: "Konfirmasi password baru", val: confirmPw, set: setConfirmPw, show: showNew, toggle: () => setShowNew((v) => !v) },
-            ].map(({ label, val, set, show, toggle }) => (
-              <label key={label} className="block space-y-1.5">
-                <span className="text-xs font-extrabold text-[var(--odong-text)]">{label}</span>
-                <span className="relative block">
-                  <input
-                    type={show ? "text" : "password"}
-                    value={val}
-                    onChange={(e) => set(e.target.value)}
-                    className="block w-full rounded-xl border border-[var(--odong-border)] bg-[var(--odong-surface)] px-3 py-2.5 pr-10 text-sm font-semibold text-[var(--odong-text)] outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-100"
-                  />
-                  <button type="button" onClick={toggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--odong-muted)]">
-                    {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </span>
-              </label>
-            ))}
-            <button
-              type="button"
-              onClick={handleChangePassword}
-              disabled={saving}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary-600 text-sm font-bold text-white transition hover:bg-primary-700 disabled:opacity-60"
-            >
-              {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? "Menyimpan..." : "Simpan password baru"}
-            </button>
-          </div>
-        )}
-      </div>
-
-      <p className="text-center text-xs text-[var(--odong-muted)]">
-        Jika akun terasa mencurigakan, segera ganti password dan hubungi tim kami.
-      </p>
-    </SettingsModal>
   );
 }
 
@@ -437,7 +314,6 @@ function BantuanPanel({ open, onClose }: { open: boolean; onClose: () => void })
 
 // ── Settings items config ─────────────────────────────────────────────────────
 const settingsItems: { key: ActivePanel; title: string; description: string; icon: React.ElementType }[] = [
-  { key: "keamanan",    title: "Keamanan",             description: "Password, perangkat aktif, dan verifikasi akun.", icon: LockKeyhole },
   { key: "pembayaran",  title: "Metode Pembayaran",    description: "E-wallet, kartu debit, dan pilihan pembayaran utama.", icon: CreditCard },
   { key: "preferensi",  title: "Preferensi Aplikasi",  description: "Notifikasi, reminder pickup, dan update order.", icon: SlidersHorizontal },
   { key: "bantuan",     title: "Bantuan",              description: "Pusat bantuan, chat admin, dan pertanyaan umum.", icon: HelpCircle },
@@ -778,7 +654,6 @@ export function ProfilePage({ status: propStatus = "ready" }: ProfilePageProps) 
       </div>
 
       {/* ── Settings panels ─────────────────────────────────────────────── */}
-      <KeamananPanel   open={activePanel === "keamanan"}   onClose={() => setActivePanel(null)} />
       <PembayaranPanel open={activePanel === "pembayaran"} onClose={() => setActivePanel(null)} />
       <PreferensiPanel open={activePanel === "preferensi"} onClose={() => setActivePanel(null)} />
       <BantuanPanel    open={activePanel === "bantuan"}    onClose={() => setActivePanel(null)} />
