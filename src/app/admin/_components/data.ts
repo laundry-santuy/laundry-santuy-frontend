@@ -92,7 +92,8 @@ export const revenueTrend: RevenuePoint[] = [
 
 export const orderStatusDistribution: OrderStatusSlice[] = [
   { label: "Selesai", value: 70, color: "#16a34a" },
-  { label: "Diproses", value: 17, color: "#d97706" },
+  { label: "Di Laundry", value: 17, color: "#f59e0b" },
+  { label: "Siap Diantar", value: 10, color: "#0ea5e9" },
   { label: "Menunggu", value: 10, color: "#e11d48" },
   { label: "Dibatalkan", value: 3, color: "#64748b" },
 ];
