@@ -20,6 +20,7 @@ export type DriverOrderFilter = "Semua" | "Order Baru" | "Diterima" | "Ditolak";
 
 export type DriverIncomingOrder = {
   id: string;
+  kodePesanan: string;
   queueNumber: string;
   customerName: string;
   customerInitials: string;
@@ -50,9 +51,29 @@ export type DriverActiveOrderFilter =
   | "Siap Diantar"
   | "Diantar";
 
+export type DriverHistoryOrder = {
+  id_pesanan: string;
+  kodePesanan: string;
+  customer: string;
+  layanan: string;
+  outlet: string;
+  berat: string;
+  total: string;
+  status: "selesai" | "dibatalkan" | "ditolak";
+  waktu: string;
+  fotoBuktiUrl?: string | null;
+};
+
+export type DriverHistoryStats = {
+  totalSelesai: number;
+  totalDibatalkan: number;
+  totalPendapatan: string;
+};
+
 export type DriverActiveOrder = {
   id: string;
   queueNumber: string;
+  kodePesanan: string;
   customerName: string;
   customerInitials: string;
   phone: string;
@@ -63,4 +84,5 @@ export type DriverActiveOrder = {
   pickupTime: string;
   currentStage: DriverActiveProcessStage;
   note: string;
+  fotoBuktiUrl: string | null;
 };

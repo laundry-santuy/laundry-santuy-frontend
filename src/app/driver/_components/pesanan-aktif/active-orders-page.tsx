@@ -2,11 +2,13 @@
 
 import { cn } from "@/lib/utils";
 import {
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   MapPinned,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   activeProcessStages,
   activeStageFilterMap,
@@ -29,6 +31,7 @@ import type {
   DriverPageStatus,
 } from "../types";
 import { fetchPesananAktif, updatePesananStatus } from "@/lib/driver-api";
+import { GpsShareButton } from "../gps-share-button";
 import { useDriverToast } from "@/hooks/use-driver-toast";
 import { DriverToastList } from "@/components/ui/driver-toast";
 
@@ -81,6 +84,13 @@ export function ActiveOrdersPage() {
   const [activeFilter, setActiveFilter]   = useState<DriverActiveOrderFilter>("Semua");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const { toasts, toast, dismiss }            = useDriverToast();
+  const STAGE_PAGE_SIZE = 4;
+  const [stagePages, setStagePages] = useState<Partial<Record<string, number>>>({});
+  const prevFilterRef = useRef(activeFilter);
+
+  const getStagePage = (stageId: string) => stagePages[stageId] ?? 1;
+  const setStagePageFor = (stageId: string, page: number) =>
+    setStagePages((prev) => ({ ...prev, [stageId]: page }));
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +108,13 @@ export function ActiveOrdersPage() {
 
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (prevFilterRef.current !== activeFilter) {
+      prevFilterRef.current = activeFilter;
+      setStagePages({});
+    }
+  }, [activeFilter]);
 
   const filteredOrders = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -379,17 +396,58 @@ export function ActiveOrdersPage() {
                         </span>
                       </div>
 
-                      <div className="mt-5 grid gap-5 2xl:grid-cols-2">
-                        {stage.orders.map((order) => (
-                          <ActiveOrderCard
-                            key={order.id}
-                            order={order}
-                            isPending={pendingId === order.id}
-                            onAdvanceStage={handleAdvanceStage}
-                            onOpenDetail={(o) => setSelectedOrderId(o.id)}
-                          />
-                        ))}
-                      </div>
+                      {(() => {
+                        const stagePage = getStagePage(stage.id);
+                        const stageTotalPages = Math.max(1, Math.ceil(stage.orders.length / STAGE_PAGE_SIZE));
+                        const pageOrders = stage.orders.slice(
+                          (stagePage - 1) * STAGE_PAGE_SIZE,
+                          stagePage * STAGE_PAGE_SIZE,
+                        );
+                        return (
+                          <>
+                            <div className="mt-5 grid gap-5 2xl:grid-cols-2">
+                              {pageOrders.map((order) => (
+                                <ActiveOrderCard
+                                  key={order.id}
+                                  order={order}
+                                  isPending={pendingId === order.id}
+                                  onAdvanceStage={handleAdvanceStage}
+                                  onOpenDetail={(o) => setSelectedOrderId(o.id)}
+                                />
+                              ))}
+                            </div>
+
+                            {stageTotalPages > 1 && (
+                              <div className="mt-5 flex items-center justify-between gap-3 border-t border-[var(--odong-border)] pt-5">
+                                <p className="text-sm font-semibold text-[var(--odong-muted)]">
+                                  {(stagePage - 1) * STAGE_PAGE_SIZE + 1}–{Math.min(stagePage * STAGE_PAGE_SIZE, stage.orders.length)} dari {stage.orders.length} order
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={stagePage <= 1}
+                                    onClick={() => setStagePageFor(stage.id, stagePage - 1)}
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-text)] transition hover:bg-primary-50 disabled:pointer-events-none disabled:opacity-40"
+                                  >
+                                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                                  </button>
+                                  <span className="min-w-[3rem] text-center text-sm font-extrabold text-[var(--odong-text)]">
+                                    {stagePage} / {stageTotalPages}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    disabled={stagePage >= stageTotalPages}
+                                    onClick={() => setStagePageFor(stage.id, stagePage + 1)}
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-text)] transition hover:bg-primary-50 disabled:pointer-events-none disabled:opacity-40"
+                                  >
+                                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </section>
                   );
                 })}
@@ -461,6 +519,16 @@ export function ActiveOrdersPage() {
                   Fokus ke order yang paling dekat dulu. Setelah status naik,
                   order berikutnya otomatis mengikuti alur berikutnya.
                 </p>
+              </section>
+
+              <section className="rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-5 shadow-[0_18px_46px_rgba(25,28,29,0.07)] backdrop-blur-xl">
+                <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary-700">
+                  GPS Lokasi
+                </p>
+                <p className="mt-2 mb-4 text-sm leading-6 text-[var(--odong-muted)]">
+                  Bagikan posisi real-time agar pelanggan bisa melacak kamu di peta.
+                </p>
+                <GpsShareButton />
               </section>
             </div>
           </aside>

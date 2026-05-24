@@ -43,10 +43,10 @@ export type TrackingOrder = {
   total: string;
   pickupWindow: string;
   outlet: string;
-  payment: string;
+  payment: string | null;
   pickup: TrackingLocation;
   dropoff: TrackingLocation;
-  courier: TrackingCourier;
+  courier: TrackingCourier | null;
   timeline: TrackingStep[];
 };
 

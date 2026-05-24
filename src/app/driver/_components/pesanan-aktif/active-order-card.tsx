@@ -124,17 +124,25 @@ export function ActiveOrderCard({
 
   const canAdvance = !isPending && !isUploading && (!isDiantar || fotoFile !== null);
 
+  const MAX_FOTO_SIZE = 5 * 1024 * 1024; // 5 MB
+
   const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
+    if (!file) {
+      setFotoFile(null);
+      setFotoPreview(null);
+      return;
+    }
+    if (file.size > MAX_FOTO_SIZE) {
+      setUploadError("Ukuran foto maksimal 5 MB. Pilih foto yang lebih kecil.");
+      e.target.value = "";
+      return;
+    }
     setFotoFile(file);
     setUploadError(null);
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => setFotoPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setFotoPreview(null);
-    }
+    const reader = new FileReader();
+    reader.onload = () => setFotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleConfirmSelesai = async () => {
@@ -143,12 +151,15 @@ export function ActiveOrderCard({
     setUploadError(null);
     try {
       const reader = new FileReader();
-      const base64Url = await new Promise<string>((resolve, reject) => {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
         reader.onload  = () => resolve(reader.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(fotoFile);
       });
-      await uploadFotoBukti(order.id, base64Url);
+      // Strip the "data:<mime>;base64," prefix — backend expects raw base64
+      const [header, rawBase64] = dataUrl.split(',');
+      const mimeType = header.match(/data:([^;]+)/)?.[1] ?? 'image/jpeg';
+      await uploadFotoBukti(order.id, rawBase64, mimeType);
       onAdvanceStage(order.id);
     } catch {
       setUploadError("Gagal unggah foto, coba lagi.");
@@ -166,10 +177,10 @@ export function ActiveOrderCard({
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[var(--odong-muted)]">
-              Order ID
+              Kode Pesanan
             </p>
             <h2 className="mt-1 truncate text-2xl font-extrabold text-[var(--odong-text)]">
-              {order.id}
+              {order.kodePesanan}
             </h2>
           </div>
         </div>

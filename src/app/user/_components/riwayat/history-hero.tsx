@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight, Clock, ReceiptText, Sparkles } from "lucide-react";
+import { ArrowRight, Clock, Loader2, ReceiptText, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { fetchRekomendasiAI, type RekomendasiAIResponse } from "@/lib/user-api";
 import type { HistoryMetric } from "./types";
 
 type HistoryHeroProps = {
@@ -8,6 +12,33 @@ type HistoryHeroProps = {
 };
 
 export function HistoryHero({ metrics, totalOrders }: HistoryHeroProps) {
+  const [rekomendasi, setRekomendasi] = useState<RekomendasiAIResponse | null>(null);
+  const [loadingRek, setLoadingRek] = useState(true);
+
+  useEffect(() => {
+    const CACHE_KEY = 'ls_rekomendasi';
+    const CACHE_TTL = 60 * 60 * 1000; // 1 jam
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const { data, ts } = JSON.parse(raw);
+        if (Date.now() - ts < CACHE_TTL) {
+          setRekomendasi(data);
+          setLoadingRek(false);
+          return;
+        }
+      }
+    } catch {}
+
+    fetchRekomendasiAI()
+      .then((d) => {
+        setRekomendasi(d);
+        setLoadingRek(false);
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data: d, ts: Date.now() })); } catch {}
+      })
+      .catch(() => setLoadingRek(false));
+  }, []);
+
   return (
     <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-stretch 2xl:grid-cols-[minmax(0,1fr)_420px]">
       <div className="overflow-hidden rounded-[32px] border border-primary-100 dark:border-[var(--odong-border)] bg-primary-50/80 dark:bg-[var(--odong-surface-soft)] p-6 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-8">
@@ -71,40 +102,59 @@ export function HistoryHero({ metrics, totalOrders }: HistoryHeroProps) {
 
       <aside className="rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-6 shadow-[0_18px_46px_rgba(25,28,29,0.07)] backdrop-blur-xl">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-700">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-              Cepat ulangi order
-            </p>
-            <h2 className="mt-5 text-2xl font-extrabold leading-tight text-[var(--odong-text)]">
-              Layanan favorit kamu siap dipesan lagi.
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--odong-muted)]">
-              Paket Cuci + Setrika paling sering kamu pakai untuk pickup weekday.
-            </p>
-          </div>
+          <p className="inline-flex items-center gap-2 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-700">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+            Cepat ulangi order
+            {rekomendasi?.source === 'ai' && (
+              <span className="rounded-full bg-primary-600 px-1.5 py-0.5 text-[9px] font-extrabold text-white">AI</span>
+            )}
+          </p>
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-neutral-900 text-white">
             <Clock className="h-5 w-5" aria-hidden="true" />
           </span>
         </div>
 
-        <div className="mt-5 rounded-3xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold text-[var(--odong-muted)]">
-                Terakhir dipesan
-              </p>
-              <p className="mt-1 text-lg font-extrabold text-[var(--odong-text)]">
-                Cuci + Setrika
-              </p>
-            </div>
-            <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-bold text-primary-700">
-              Favorit
-            </span>
+        <h2 className="mt-5 text-2xl font-extrabold leading-tight text-[var(--odong-text)]">
+          Layanan favorit kamu siap dipesan lagi.
+        </h2>
+
+        {loadingRek ? (
+          <div className="mt-2 flex items-center gap-2 text-sm text-[var(--odong-muted)]">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary-600" />
+            Menganalisis riwayat order...
           </div>
-          <p className="mt-3 text-sm text-[var(--odong-muted)]">
-            Estimasi 2 hari - pickup dari Rumah.
+        ) : (
+          <p className="mt-2 max-h-24 overflow-y-auto text-justify text-sm leading-6 text-[var(--odong-muted)]">
+            {rekomendasi?.insight ?? 'Pesan lagi layanan favoritmu dengan mudah.'}
           </p>
+        )}
+
+        <div className="mt-5 rounded-3xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-4">
+          {loadingRek ? (
+            <div className="flex items-center gap-3">
+              <div className="h-5 w-32 animate-pulse rounded-lg bg-[var(--odong-border)]" />
+              <div className="h-5 w-16 animate-pulse rounded-full bg-[var(--odong-border)]" />
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-[var(--odong-muted)]">
+                    Terakhir dipesan
+                  </p>
+                  <p className="mt-1 text-lg font-extrabold text-[var(--odong-text)]">
+                    {rekomendasi?.rekomendasiLayanan ?? '-'}
+                  </p>
+                </div>
+                <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-bold text-primary-700">
+                  {rekomendasi?.badge ?? 'Favorit'}
+                </span>
+              </div>
+              <p className="mt-3 text-sm text-[var(--odong-muted)]">
+                Estimasi {rekomendasi?.estimasiWaktu ?? '2 hari'} - pickup dari rumah.
+              </p>
+            </>
+          )}
         </div>
 
         <Link

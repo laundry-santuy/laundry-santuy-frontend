@@ -45,7 +45,9 @@ type PesanOrderPageProps = {
 
 const DEFAULT_INFO_PICKUP = { estimasiPickup: "2 jam", biayaPickup: 8000, minGratisPickup: 75000 };
 
-const ADDON_ICON_MAP: Record<string, React.ElementType> = {
+import type { LucideIcon } from "lucide-react";
+
+const ADDON_ICON_MAP: Record<string, LucideIcon> = {
   leaf:            Leaf,
   shield:          ShieldCheck,
   truck:           Truck,
@@ -56,7 +58,7 @@ const ADDON_ICON_MAP: Record<string, React.ElementType> = {
   wind:            Wind,
 };
 
-function getAddonIcon(key: string | null): React.ElementType {
+function getAddonIcon(key: string | null): LucideIcon {
   return (key && ADDON_ICON_MAP[key]) ? ADDON_ICON_MAP[key] : Sparkles;
 }
 
@@ -171,6 +173,7 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [paymentModal, setPaymentModal] = useState<{
+    idPesanan: string | null;
     kodePesanan: string | null;
     total: number;
     paymentId: string;
@@ -242,10 +245,9 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
     );
     const subtotal = serviceTotal + addOnTotal;
     const pickupFee = subtotal >= infoPickup.minGratisPickup ? 0 : infoPickup.biayaPickup;
-    const discount = Math.min(Math.floor(subtotal * 0.1), 15000);
-    const total = Math.max(subtotal + pickupFee - discount, 0);
+    const total = subtotal + pickupFee;
 
-    return { subtotal, pickupFee, discount, total };
+    return { subtotal, pickupFee, discount: 0, total };
   }, [effectiveQuantity, selectedAddOns, selectedService]);
 
 
@@ -350,8 +352,10 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
         catatan: note.trim() || undefined,
         alamat_penjemputan: selectedAddress?.address,
         metode_pembayaran: selectedPaymentId || undefined,
+        addon_ids: selectedAddOnIds.length > 0 ? selectedAddOnIds : undefined,
       });
       setPaymentModal({
+        idPesanan: result.pesanan.id_pesanan ?? null,
         kodePesanan: result.pesanan.kodePesanan,
         total: result.pesanan.totalEstimasi,
         paymentId: selectedPaymentId,
@@ -401,6 +405,7 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
       {paymentModal && (
         <PaymentConfirmModal
           open={true}
+          idPesanan={paymentModal.idPesanan}
           paymentId={paymentModal.paymentId}
           total={paymentModal.total}
           kodePesanan={paymentModal.kodePesanan}
@@ -558,7 +563,9 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
                 {
                   label: "Kurir standby",
                   value: selectedOutlet
-                    ? `${selectedOutlet.jumlah_kurir} kurir siap jemput`
+                    ? selectedOutlet.jumlah_kurir > 0
+                      ? `${selectedOutlet.jumlah_kurir} kurir siap jemput`
+                      : "Belum ada kurir online"
                     : "-",
                   icon: Truck,
                   valueClass: undefined,

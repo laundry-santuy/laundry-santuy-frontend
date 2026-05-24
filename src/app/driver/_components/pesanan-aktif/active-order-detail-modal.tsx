@@ -2,7 +2,11 @@
 
 import { cn } from "@/lib/utils";
 import {
+  Camera,
+  CheckCircle2,
   Clock3,
+  ImageUp,
+  Loader2,
   MapPin,
   Navigation,
   Phone,
@@ -12,7 +16,8 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { uploadFotoBukti } from "@/lib/driver-api";
 import {
   activeProcessStages,
   activeStageLabels,
@@ -24,6 +29,7 @@ type ActiveOrderDetailModalProps = {
   order?: DriverActiveOrder;
   onClose: () => void;
   onAdvanceStage: (orderId: string) => void;
+  onFotoUploaded?: (orderId: string, url: string) => void;
 };
 
 function getMapsUrl(address: string) {
@@ -36,7 +42,48 @@ export function ActiveOrderDetailModal({
   order,
   onClose,
   onAdvanceStage,
+  onFotoUploaded,
 }: ActiveOrderDetailModalProps) {
+  const [preview, setPreview]         = useState<string | null>(null);
+  const [mimeType, setMimeType]       = useState<string>('image/jpeg');
+  const [uploading, setUploading]     = useState(false);
+  const [uploadDone, setUploadDone]   = useState(false);
+  const fileInputRef                  = useRef<HTMLInputElement>(null);
+
+  // Reset upload state when order changes
+  useEffect(() => {
+    setPreview(null);
+    setUploadDone(false);
+    setUploading(false);
+  }, [order?.id]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMimeType(file.type || 'image/jpeg');
+    const reader = new FileReader();
+    reader.onload = () => setPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpload = async () => {
+    if (!preview || !order) return;
+    setUploading(true);
+    try {
+      // Strip "data:image/...;base64," prefix
+      const base64 = preview.split(',')[1];
+      const res = await uploadFotoBukti(order.id, base64, mimeType);
+      if (res.success) {
+        setUploadDone(true);
+        onFotoUploaded?.(order.id, (res as any).data?.foto_url ?? '');
+      }
+    } catch (err: any) {
+      alert(err?.message ?? 'Gagal mengunggah foto');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   useEffect(() => {
     if (!order) {
       return;
@@ -269,6 +316,85 @@ export function ActiveOrderDetailModal({
                       : "Order ini sudah selesai diantar dan bisa dihapus dari daftar aktif."}
                   </p>
                 </div>
+
+                {/* Upload foto bukti — hanya tampil saat stage "diantar" */}
+                {order.currentStage === 'diantar' && (
+                  <div className="rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-4">
+                    <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-primary-700">
+                      Foto Bukti Pengantaran
+                    </p>
+
+                    {order.fotoBuktiUrl ? (
+                      <div className="mt-3 space-y-2">
+                        <p className="flex items-center gap-1.5 text-sm font-bold text-emerald-600">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Foto sudah diunggah
+                        </p>
+                        <a
+                          href={order.fotoBuktiUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+                        >
+                          <Camera className="h-4 w-4" />
+                          Lihat foto
+                        </a>
+                      </div>
+                    ) : uploadDone ? (
+                      <div className="mt-3 flex items-center gap-2 text-sm font-bold text-emerald-600">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Foto sudah diunggah
+                      </div>
+                    ) : (
+                      <div className="mt-3 space-y-3">
+                        {preview ? (
+                          <img
+                            src={preview}
+                            alt="Preview foto bukti"
+                            className="h-28 w-full rounded-2xl object-cover"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary-200 bg-primary-50/50 text-sm font-bold text-primary-700 transition hover:border-primary-400 hover:bg-primary-50"
+                          >
+                            <Camera className="h-4 w-4" />
+                            Ambil / Pilih Foto
+                          </button>
+                        )}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+                        {preview && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => { setPreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-2xl border border-[var(--odong-border)] text-xs font-bold text-[var(--odong-muted)] transition hover:bg-[var(--odong-surface-soft)]"
+                            >
+                              Ganti
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleUpload}
+                              disabled={uploading}
+                              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-2xl bg-emerald-600 text-xs font-bold text-white shadow-[0_8px_18px_rgba(22,163,74,0.22)] transition hover:bg-emerald-700 disabled:opacity-60"
+                            >
+                              {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageUp className="h-3.5 w-3.5" />}
+                              {uploading ? 'Mengunggah...' : 'Upload'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid gap-3">
                   <a

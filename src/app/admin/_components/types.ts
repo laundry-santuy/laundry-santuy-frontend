@@ -60,12 +60,16 @@ export type AdminOrderStatus =
 
 export type AdminOrder = {
   id: string;
+  kodePesanan: string;
   customer: string;
   outlet: string;
   service: string;
   total: string;
   status: AdminOrderStatus;
   createdAt: string;
+  statusPembayaran: string | null;
+  fotoBuktiUrl: string | null;
+  statusAsli: string | null;
 };
 
 export type AdminSettingValues = {

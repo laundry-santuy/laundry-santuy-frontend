@@ -3,10 +3,13 @@
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  BadgeCheck,
+  ChevronsRight,
   ClipboardList,
   Download,
   Eye,
   Filter,
+  Image,
   PackageCheck,
   Pencil,
   Plus,
@@ -35,7 +38,7 @@ import {
   AdminIconButton,
   AdminPaginationBar,
 } from "../admin-table-tools";
-import { fetchManajemenPesanan, fetchPengaturanOutlet, fetchManajemenUser, updatePesananStatus, createPesananAdmin, deletePesananAdmin } from "@/lib/admin-api";
+import { fetchManajemenPesanan, fetchPengaturanOutlet, fetchManajemenUser, updatePesananStatus, createPesananAdmin, deletePesananAdmin, konfirmasiPembayaran } from "@/lib/admin-api";
 import type { AdminOrder, AdminOrderStatus } from "../types";
 
 const PAGE_SIZE = 5;
@@ -82,6 +85,32 @@ const emptyOrderForm: OrderFormValues = {
   total: "Rp ",
   status: "Pending",
 };
+
+const STAGE_NEXT_STATUS: Record<string, string> = {
+  menunggu: 'menuju_lokasi',
+  menuju_lokasi: 'dijemput',
+  dijemput: 'di_laundry',
+  di_laundry: 'siap_diantar',
+  siap_diantar: 'diantar',
+  diantar: 'selesai',
+};
+
+const STAGE_LABEL: Record<string, string> = {
+  menunggu: 'Menunggu',
+  menuju_lokasi: 'Menuju Lokasi',
+  dijemput: 'Dijemput',
+  di_laundry: 'Di Laundry',
+  siap_diantar: 'Siap Diantar',
+  diantar: 'Diantar',
+  selesai: 'Selesai',
+  dibatalkan: 'Dibatalkan',
+};
+
+function getAdvanceLabel(statusAsli: string): string {
+  if (statusAsli === 'di_laundry') return 'Konfirmasi Selesai Cuci';
+  const next = STAGE_NEXT_STATUS[statusAsli];
+  return next ? `Tandai ${STAGE_LABEL[next] ?? next}` : '';
+}
 
 function createNextOrderId(orders: AdminOrder[]) {
   const nextNumber =
@@ -152,6 +181,10 @@ export function AdminOrderManagementPage() {
   const [editingOrder, setEditingOrder] = useState<AdminOrder | null>(null);
   const [detailOrder, setDetailOrder] = useState<AdminOrder | null>(null);
   const [deleteOrder, setDeleteOrder] = useState<AdminOrder | null>(null);
+  const [konfirmasiOrder, setKonfirmasiOrder] = useState<AdminOrder | null>(null);
+  const [konfirmasiLoading, setKonfirmasiLoading] = useState(false);
+  const [advanceOrder, setAdvanceOrder] = useState<AdminOrder | null>(null);
+  const [advanceLoading, setAdvanceLoading] = useState(false);
   const [orderForm, setOrderForm] = useState<OrderFormValues>(emptyOrderForm);
   const timerRef = useRef<number | null>(null);
 
@@ -196,15 +229,15 @@ export function AdminOrderManagementPage() {
       const res = await fetchPengaturanOutlet();
       const semua = res.semuaOutlet || [];
       setOutlets(
-        semua.map((o) => ({ id: o.id_outlet ?? o.id ?? String(o.namaOutlet || o.nama || Math.random()), nama: o.namaOutlet ?? o.nama }))
+        semua.map((o) => ({ id: o.id_outlet ?? String(o.namaOutlet || Math.random()), nama: o.namaOutlet }))
       );
 
-      const layanan = (res.layananOutlet || []).map((l) => ({ id: l.id_layanan ?? l.id ?? String(l.namaLayanan || l.nama || Math.random()), nama: l.namaLayanan ?? l.nama }));
+      const layanan = (res.layananOutlet || []).map((l) => ({ id: l.id_layanan ?? String(l.namaLayanan || Math.random()), nama: l.namaLayanan }));
       setServices(layanan);
 
       setOrderForm((cur) => ({
         ...cur,
-        outlet: cur.outlet || (semua[0]?.id ?? ""),
+        outlet: cur.outlet || (semua[0]?.id_outlet ?? ""),
         service: cur.service || (layanan[0]?.id ?? ""),
       }));
     } catch (err) {
@@ -229,12 +262,16 @@ export function AdminOrderManagementPage() {
 
         return {
           id: o.id_pesanan,
+          kodePesanan: o.kodePesanan ?? `#LS-${(o.id_pesanan || '').slice(-3)}`,
           customer: o.customer?.name || 'Tidak Diketahui',
           outlet: o.outlet || '-',
           service: o.layanan || '-',
           total: o.harga ? `Rp ${o.harga.toLocaleString('id-ID')}` : 'Rp 0',
           status,
           createdAt: dateLabel,
+          statusPembayaran: o.statusPembayaran ?? null,
+          fotoBuktiUrl: o.fotoBuktiUrl ?? null,
+          statusAsli: o.statusAsli ?? null,
         } as AdminOrder;
       });
 
@@ -251,7 +288,7 @@ export function AdminOrderManagementPage() {
 
     return orders.filter((order) => {
       const matchesQuery =
-        order.id.toLowerCase().includes(normalizedQuery) ||
+        order.kodePesanan.toLowerCase().includes(normalizedQuery) ||
         order.customer.toLowerCase().includes(normalizedQuery) ||
         order.outlet.toLowerCase().includes(normalizedQuery) ||
         order.service.toLowerCase().includes(normalizedQuery);
@@ -341,19 +378,24 @@ export function AdminOrderManagementPage() {
           id_laundry: orderForm.outlet,
           harga_total: hargaParsed,
           status: orderForm.status,
-          id_pengguna: selectedCustomer.id,
+          id_pengguna: selectedCustomer?.id ?? '',
         };
         const res = await createPesananAdmin(payload as any);
         const created = res.pesanan;
         if (created) {
+          const rawId: string = created.id_pesanan || createNextOrderId([]);
           const mapped: AdminOrder = {
-            id: created.id_pesanan || createNextOrderId([]),
+            id: rawId,
+            kodePesanan: created.kodePesanan ?? `#LS-${rawId.slice(-3)}`,
             customer: created.customer?.nama || selectedCustomer?.nama || "Tidak Diketahui",
             outlet: created.outlet?.nama || orderForm.outlet,
             service: created.layanan?.nama || orderForm.service,
             total: `Rp ${Number(created.totalEstimasi || hargaParsed).toLocaleString('id-ID')}`,
             status: (created.status || 'menunggu').toString().toLowerCase().includes('siap') ? 'ReadyForDelivery' : (created.status || 'menunggu').toString().toLowerCase().includes('selesai') ? 'Completed' : 'Pending',
             createdAt: created.waktuPesanan || formatDateTimeLabel(),
+            statusPembayaran: null,
+            fotoBuktiUrl: null,
+            statusAsli: created.status ?? 'menunggu',
           };
           setOrders((currentOrders) => [mapped, ...currentOrders]);
         }
@@ -408,6 +450,65 @@ export function AdminOrderManagementPage() {
     closeOrderForm();
   };
 
+  const handleKonfirmasiPembayaran = (order: AdminOrder) => {
+    setKonfirmasiOrder(order);
+  };
+
+  const confirmKonfirmasiPembayaran = async () => {
+    if (!konfirmasiOrder) return;
+    setKonfirmasiLoading(true);
+    try {
+      await konfirmasiPembayaran(konfirmasiOrder.id);
+      setOrders((cur) =>
+        cur.map((o) => o.id === konfirmasiOrder.id ? { ...o, statusPembayaran: 'lunas' } : o)
+      );
+      setDetailOrder((d) =>
+        d?.id === konfirmasiOrder.id ? { ...d, statusPembayaran: 'lunas' } : d
+      );
+      setKonfirmasiOrder(null);
+    } catch (err: any) {
+      alert(err?.message ?? 'Gagal mengkonfirmasi pembayaran.');
+    } finally {
+      setKonfirmasiLoading(false);
+    }
+  };
+
+  const confirmAdvanceStage = async () => {
+    if (!advanceOrder) return;
+    const statusAsli = (advanceOrder.statusAsli ?? '').toLowerCase();
+    const nextStatus = STAGE_NEXT_STATUS[statusAsli];
+    if (!nextStatus) return;
+
+    setAdvanceLoading(true);
+    try {
+      await updatePesananStatus(advanceOrder.id, nextStatus);
+
+      const newAdminStatus: AdminOrderStatus =
+        nextStatus === 'selesai' ? 'Completed' :
+        nextStatus === 'siap_diantar' ? 'ReadyForDelivery' :
+        nextStatus === 'dibatalkan' ? 'Cancelled' :
+        nextStatus === 'menunggu' ? 'Pending' : 'Processing';
+
+      setOrders((cur) =>
+        cur.map((o) =>
+          o.id === advanceOrder.id
+            ? { ...o, status: newAdminStatus, statusAsli: nextStatus }
+            : o,
+        ),
+      );
+      setDetailOrder((d) =>
+        d?.id === advanceOrder.id
+          ? { ...d, status: newAdminStatus, statusAsli: nextStatus }
+          : d,
+      );
+      setAdvanceOrder(null);
+    } catch (err: any) {
+      alert(err?.message ?? 'Gagal memperbarui status pesanan.');
+    } finally {
+      setAdvanceLoading(false);
+    }
+  };
+
   const confirmDeleteOrder = async () => {
     if (!deleteOrder) return;
     try {
@@ -432,7 +533,7 @@ export function AdminOrderManagementPage() {
       fileName: "laundry-santuy-pesanan",
       sheetName: "Pesanan",
       columns: [
-        { header: "ID", value: (order) => order.id },
+        { header: "ID", value: (order) => order.kodePesanan },
         { header: "Customer", value: (order) => order.customer },
         { header: "Outlet", value: (order) => order.outlet },
         { header: "Layanan", value: (order) => order.service },
@@ -572,7 +673,7 @@ export function AdminOrderManagementPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate font-extrabold text-[var(--odong-text)]">
-                          {order.id}
+                          {order.kodePesanan}
                         </p>
                         <p className="mt-1 text-sm text-[var(--odong-muted)]">
                           {order.createdAt}
@@ -617,6 +718,29 @@ export function AdminOrderManagementPage() {
                     </div>
 
                     <div className="mt-4 flex justify-end gap-2 border-t border-[var(--odong-border)] pt-4">
+                      {order.fotoBuktiUrl && (
+                        <AdminIconButton
+                          icon={Image}
+                          label="Lihat foto bukti"
+                          onClick={() => window.open(order.fotoBuktiUrl!, '_blank')}
+                        />
+                      )}
+                      {order.statusPembayaran === 'menunggu_konfirmasi' && (
+                        <AdminIconButton
+                          icon={BadgeCheck}
+                          label="Konfirmasi pembayaran"
+                          tone="success"
+                          onClick={() => handleKonfirmasiPembayaran(order)}
+                        />
+                      )}
+                      {order.statusAsli === 'di_laundry' && (
+                        <AdminIconButton
+                          icon={ChevronsRight}
+                          label="Konfirmasi Selesai Cuci"
+                          tone="primary"
+                          onClick={() => setAdvanceOrder(order)}
+                        />
+                      )}
                       <AdminIconButton
                         icon={Eye}
                         label={`Detail ${order.id}`}
@@ -659,7 +783,7 @@ export function AdminOrderManagementPage() {
                       >
                         <td className="px-4 py-4">
                           <p className="font-extrabold text-[var(--odong-text)]">
-                            {order.id}
+                            {order.kodePesanan}
                           </p>
                           <p className="mt-1 text-sm text-[var(--odong-muted)]">
                             {order.createdAt}
@@ -684,6 +808,29 @@ export function AdminOrderManagementPage() {
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex justify-end gap-2">
+                            {order.fotoBuktiUrl && (
+                              <AdminIconButton
+                                icon={Image}
+                                label="Lihat foto bukti"
+                                onClick={() => window.open(order.fotoBuktiUrl!, '_blank')}
+                              />
+                            )}
+                            {order.statusPembayaran === 'menunggu_konfirmasi' && (
+                              <AdminIconButton
+                                icon={BadgeCheck}
+                                label="Konfirmasi pembayaran"
+                                tone="success"
+                                onClick={() => handleKonfirmasiPembayaran(order)}
+                              />
+                            )}
+                            {order.statusAsli === 'di_laundry' && (
+                              <AdminIconButton
+                                icon={ChevronsRight}
+                                label="Konfirmasi Selesai Cuci"
+                                tone="primary"
+                                onClick={() => setAdvanceOrder(order)}
+                              />
+                            )}
                             <AdminIconButton
                               icon={Eye}
                               label={`Detail ${order.id}`}
@@ -893,14 +1040,89 @@ export function AdminOrderManagementPage() {
         {detailOrder ? (
           <div className="space-y-4">
             <div className="grid gap-3">
-              <DetailItem label="Order" value={detailOrder.id} />
+              <DetailItem label="Order" value={detailOrder.kodePesanan} />
               <DetailItem label="Customer" value={detailOrder.customer} />
               <DetailItem label="Outlet" value={detailOrder.outlet} />
               <DetailItem label="Layanan" value={detailOrder.service} />
               <DetailItem label="Status" value={<StatusBadge status={detailOrder.status} />} />
               <DetailItem label="Total" value={detailOrder.total} />
               <DetailItem label="Dibuat" value={detailOrder.createdAt} />
+              <DetailItem
+                label="Status Pembayaran"
+                value={
+                  detailOrder.statusPembayaran === 'lunas' ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-700">
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      Lunas
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-extrabold text-amber-700">
+                      Menunggu Konfirmasi
+                    </span>
+                  )
+                }
+              />
+              {detailOrder.fotoBuktiUrl && (
+                <DetailItem
+                  label="Foto Bukti Pengantaran"
+                  value={
+                    <a
+                      href={detailOrder.fotoBuktiUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-primary-700 underline underline-offset-2 hover:text-primary-900"
+                    >
+                      <Image className="h-3.5 w-3.5" />
+                      Lihat foto
+                    </a>
+                  }
+                />
+              )}
             </div>
+
+            {/* Konfirmasi pembayaran — tampil saat pengguna sudah konfirmasi transfer/QRIS */}
+            {detailOrder.statusPembayaran === 'menunggu_konfirmasi' && (
+              <div className="rounded-[20px] border border-emerald-100 bg-emerald-50 p-4">
+                <p className="text-sm font-bold text-emerald-800">
+                  Pengguna telah mengkonfirmasi pembayaran.
+                </p>
+                <p className="mt-1 text-xs text-emerald-700">
+                  Verifikasi dan konfirmasi pembayaran agar pesanan dapat diproses oleh kurir.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleKonfirmasiPembayaran(detailOrder)}
+                  className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(22,163,74,0.22)] transition hover:-translate-y-0.5 hover:bg-emerald-700 active:scale-[0.98]"
+                >
+                  <BadgeCheck className="h-4 w-4" />
+                  Konfirmasi Pembayaran
+                </button>
+              </div>
+            )}
+
+            {/* Selesai cuci — hanya tampil saat cucian di laundry menunggu konfirmasi admin */}
+            {detailOrder.statusAsli === 'di_laundry' && (
+              <div className="rounded-[20px] border border-primary-100 bg-primary-50 p-4">
+                <p className="text-sm font-bold text-primary-800">
+                  Cucian sudah selesai dicuci?
+                </p>
+                <p className="mt-1 text-xs text-primary-700">
+                  Di Laundry → Siap Diantar
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdvanceOrder(detailOrder);
+                    setDetailOrder(null);
+                  }}
+                  className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-primary-600 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(0,88,202,0.22)] transition hover:-translate-y-0.5 hover:bg-primary-700 active:scale-[0.98]"
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                  Konfirmasi Selesai Cuci
+                </button>
+              </div>
+            )}
+
             <AdminActionBar className="justify-end border-t border-[var(--odong-border)] pt-4">
               <button
                 type="button"
@@ -946,6 +1168,109 @@ export function AdminOrderManagementPage() {
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
               Hapus
+            </button>
+          </div>
+        </div>
+      </AdminDialog>
+
+      {/* Modal lanjutkan tahap */}
+      <AdminDialog
+        open={Boolean(advanceOrder)}
+        onClose={() => setAdvanceOrder(null)}
+        title={advanceOrder?.statusAsli === 'di_laundry' ? 'Konfirmasi selesai cuci?' : 'Lanjutkan tahap pesanan?'}
+        description="Status pesanan akan diperbarui ke tahap berikutnya."
+        size="sm"
+      >
+        <div className="space-y-5">
+          {advanceOrder && (
+            <>
+              <div className="divide-y divide-[var(--odong-border)] rounded-[20px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)]">
+                {[
+                  { label: "Order", value: advanceOrder.kodePesanan },
+                  { label: "Customer", value: advanceOrder.customer },
+                  {
+                    label: "Status",
+                    value: `${STAGE_LABEL[advanceOrder.statusAsli ?? ''] ?? advanceOrder.statusAsli} → ${STAGE_LABEL[STAGE_NEXT_STATUS[advanceOrder.statusAsli ?? '']] ?? '-'}`,
+                  },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between gap-4 px-4 py-3">
+                    <span className="text-xs font-semibold text-[var(--odong-muted)]">{label}</span>
+                    <span className="text-sm font-extrabold text-[var(--odong-text)]">{value}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-[16px] border border-primary-100 bg-primary-50 px-4 py-3 text-sm leading-6 text-primary-700">
+                {advanceOrder.statusAsli === 'di_laundry'
+                  ? 'Setelah dikonfirmasi, kurir dapat melanjutkan pengantaran ke pelanggan.'
+                  : 'Tindakan ini akan memperbarui status dan memberitahu kurir.'}
+              </div>
+            </>
+          )}
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setAdvanceOrder(null)}
+              disabled={advanceLoading}
+              className={adminSecondaryButtonClass}
+            >
+              Batalkan
+            </button>
+            <button
+              type="button"
+              onClick={confirmAdvanceStage}
+              disabled={advanceLoading}
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary-600 px-5 py-2.5 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(0,88,202,0.22)] transition hover:bg-primary-700 disabled:opacity-60"
+            >
+              <ChevronsRight className="h-4 w-4" aria-hidden="true" />
+              {advanceLoading ? 'Memproses...' : (advanceOrder ? getAdvanceLabel(advanceOrder.statusAsli ?? '') : 'Lanjutkan')}
+            </button>
+          </div>
+        </div>
+      </AdminDialog>
+
+      {/* Modal konfirmasi pembayaran */}
+      <AdminDialog
+        open={Boolean(konfirmasiOrder)}
+        onClose={() => setKonfirmasiOrder(null)}
+        title="Konfirmasi pembayaran?"
+        description="Pembayaran akan ditandai lunas dan pesanan dilepas ke kurir."
+        size="sm"
+      >
+        <div className="space-y-5">
+          {konfirmasiOrder && (
+            <div className="divide-y divide-[var(--odong-border)] rounded-[20px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)]">
+              {[
+                { label: "Order", value: konfirmasiOrder.kodePesanan },
+                { label: "Customer", value: konfirmasiOrder.customer },
+                { label: "Total", value: konfirmasiOrder.total },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between gap-4 px-4 py-3">
+                  <span className="text-xs font-semibold text-[var(--odong-muted)]">{label}</span>
+                  <span className="text-sm font-extrabold text-[var(--odong-text)]">{value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="rounded-[16px] border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-700">
+            Setelah dikonfirmasi, status pembayaran berubah menjadi <strong>Lunas</strong> dan pesanan muncul di halaman kurir.
+          </div>
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setKonfirmasiOrder(null)}
+              disabled={konfirmasiLoading}
+              className={adminSecondaryButtonClass}
+            >
+              Batalkan
+            </button>
+            <button
+              type="button"
+              onClick={confirmKonfirmasiPembayaran}
+              disabled={konfirmasiLoading}
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(22,163,74,0.22)] transition hover:bg-emerald-700 disabled:opacity-60"
+            >
+              <BadgeCheck className="h-4 w-4" aria-hidden="true" />
+              {konfirmasiLoading ? 'Memproses...' : 'Konfirmasi Lunas'}
             </button>
           </div>
         </div>

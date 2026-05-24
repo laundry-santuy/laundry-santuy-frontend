@@ -3,10 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   ReceiptText,
   Wallet,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   fetchRiwayat,
   formatRupiah,
@@ -34,6 +37,8 @@ import type {
 type OrderHistoryPageProps = {
   status?: HistoryPageStatus;
 };
+
+const PAGE_SIZE = 5;
 
 const HISTORY_FILTERS: HistoryFilter[] = [
   "Semua",
@@ -65,18 +70,23 @@ function mapRawToHistoryOrder(
     service: raw.namaLayanan,
     status,
     date: formatWaktu(raw.waktu),
-    time: "-",
+    time: raw.waktuJemput ?? "-",
     weight: `${raw.berat} kg`,
     total: formatRupiah(raw.total),
     subtotal: formatRupiah(raw.total),
     discount: "Rp0",
-    paymentMethod: "-",
-    paymentStatus:
-      status === "Selesai" ? "Lunas" : status === "Dibatalkan" ? "Refund" : "Menunggu",
+    paymentMethod: raw.metodePembayaran ?? "-",
+    paymentStatus: (() => {
+      const sp = (raw.statusPembayaran ?? "").toLowerCase();
+      if (sp === "lunas" || sp === "paid" || sp === "confirmed") return "Lunas";
+      if (sp === "refund" || status === "Dibatalkan") return "Refund";
+      return "Menunggu";
+    })(),
     outlet: raw.outlet,
-    address: "-",
-    courier: "-",
-    note: "-",
+    address: raw.alamatPenjemputan ?? "-",
+    courier: raw.namaKurir ?? "-",
+    note: raw.catatan ?? "-",
+    fotoBuktiUrl: raw.fotoBuktiUrl ?? null,
     items: [
       {
         name: raw.namaLayanan,
@@ -122,6 +132,7 @@ export function OrderHistoryPage({ status: propStatus = "ready" }: OrderHistoryP
   const [activeFilter, setActiveFilter] = useState<HistoryFilter>("Semua");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     fetchRiwayat()
@@ -140,6 +151,8 @@ export function OrderHistoryPage({ status: propStatus = "ready" }: OrderHistoryP
     [apiData],
   );
 
+  useEffect(() => { setPage(1); }, [activeFilter, searchQuery]);
+
   const filteredOrders = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return allOrders.filter((order) => {
@@ -154,6 +167,12 @@ export function OrderHistoryPage({ status: propStatus = "ready" }: OrderHistoryP
       return matchFilter && matchSearch;
     });
   }, [allOrders, activeFilter, searchQuery]);
+
+  const totalPages = Math.ceil(filteredOrders.length / PAGE_SIZE);
+  const paginatedOrders = useMemo(
+    () => filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredOrders, page],
+  );
 
   const selectedOrder =
     filteredOrders.find((o) => o.id === selectedOrderId) ?? filteredOrders[0];
@@ -179,12 +198,49 @@ export function OrderHistoryPage({ status: propStatus = "ready" }: OrderHistoryP
         <HistoryHero metrics={metrics} totalOrders={allOrders.length} />
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-stretch 2xl:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="min-w-0 h-full">
+          <div className="min-w-0 h-full flex flex-col gap-3">
             <HistoryOrderList
-              orders={filteredOrders}
+              orders={paginatedOrders}
+              totalCount={filteredOrders.length}
               selectedOrderId={selectedOrder?.id}
               onSelectOrder={setSelectedOrderId}
             />
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-[var(--odong-border)] pt-4">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  aria-label="Halaman sebelumnya"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border-2 border-primary-100 bg-white text-primary-600 transition hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setPage(i + 1)}
+                      aria-label={`Halaman ${i + 1}`}
+                      className={cn(
+                        "h-2 rounded-full transition-all",
+                        i + 1 === page ? "w-6 bg-primary-600" : "w-2 bg-primary-200 hover:bg-primary-300",
+                      )}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  aria-label="Halaman berikutnya"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border-2 border-primary-100 bg-white text-primary-600 transition hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
           <HistoryDetailPanel order={selectedOrder} />
         </div>

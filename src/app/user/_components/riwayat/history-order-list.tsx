@@ -12,12 +12,14 @@ import type { HistoryOrder } from "./types";
 
 type HistoryOrderListProps = {
   orders: HistoryOrder[];
+  totalCount?: number;
   selectedOrderId?: string;
   onSelectOrder: (orderId: string) => void;
 };
 
 export function HistoryOrderList({
   orders,
+  totalCount,
   selectedOrderId,
   onSelectOrder,
 }: HistoryOrderListProps) {
@@ -59,7 +61,7 @@ export function HistoryOrderList({
         </div>
         <span className="inline-flex w-fit items-center gap-2 rounded-full bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-700">
           <Package className="h-3.5 w-3.5" aria-hidden="true" />
-          {orders.length} order
+          {totalCount ?? orders.length} order
         </span>
       </div>
 
@@ -129,7 +131,7 @@ export function HistoryOrderList({
                         className="h-3.5 w-3.5 text-primary-600"
                         aria-hidden="true"
                       />
-                      {order.date}, {order.time}
+                      {order.time && order.time !== "-" ? `${order.date}, ${order.time}` : order.date}
                     </p>
                   </div>
 

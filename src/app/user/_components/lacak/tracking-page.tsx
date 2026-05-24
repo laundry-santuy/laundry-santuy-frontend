@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import {
   fetchEtaAI,
+  fetchKurirPosisi,
   fetchLacak,
   formatRupiah,
   formatWaktu,
@@ -158,7 +159,7 @@ function mapToTrackingOrder(data: LacakResponse, aiEtaLabel?: string): TrackingO
     total: formatRupiah(detail?.total ?? 0),
     pickupWindow: detail ? formatWaktu(detail.waktu) : "-",
     outlet: data.detailPesanan?.namaOutlet ?? "-",
-    payment: "-",
+    payment: null,
     pickup: {
       label: alamat?.label ?? "Rumah",
       address: alamat?.alamat ?? "Alamat belum diatur",
@@ -169,47 +170,111 @@ function mapToTrackingOrder(data: LacakResponse, aiEtaLabel?: string): TrackingO
       address: alamat?.alamat ?? "Alamat belum diatur",
       note: "Pakaian bersih dikembalikan ke alamat yang sama.",
     },
-    courier: {
-      name: kurir?.nama ?? "Kurir",
-      avatar: kurir?.inisial ?? "KR",
-      rating: kurir?.rating ?? 4.8,
-      vehicle: kurir?.kendaraan ?? "-",
+    courier: kurir ? {
+      name: kurir.nama,
+      avatar: kurir.inisial ?? "KR",
+      rating: kurir.rating ?? 0,
+      vehicle: kurir.kendaraan ?? "-",
       distance: peta ? `${peta.jarakKm.toFixed(1)} km dari outlet` : "-",
       responseTime: "Biasanya membalas < 5 menit",
-    },
+    } : null,
     timeline: buildTimeline(data.statusPerjalanan),
   };
 }
 
+const GPS_POLL_INTERVAL_MS = 5_000;
+
 export function TrackingPage({ status: propStatus = "ready" }: TrackingPageProps) {
   const [pageStatus, setPageStatus] = useState<TrackingPageStatus>("loading");
   const [apiData, setApiData] = useState<LacakResponse | null>(null);
-  const [aiEtaLabel, setAiEtaLabel] = useState<string | undefined>(undefined);
+  const [aiEtaLabel, setAiEtaLabel]     = useState<string | undefined>(undefined);
+  const [aiEtaMenit, setAiEtaMenit]     = useState<number | null>(null);
   const [fetchKey, setFetchKey] = useState(0);
+  const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
+  const [liveDriverLat, setLiveDriverLat] = useState<number | null>(null);
+  const [liveDriverLng, setLiveDriverLng] = useState<number | null>(null);
+  const [selectedIdPesanan, setSelectedIdPesanan] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     setPageStatus("loading");
     setAiEtaLabel(undefined);
-    fetchLacak()
+    fetchLacak(selectedIdPesanan)
       .then((data) => {
         setApiData(data);
+        setFetchedAt(new Date());
         setPageStatus(data.detailPesanan || data.pesananAktif ? "ready" : "empty");
+        // Seed initial driver position from lacak snapshot
+        setLiveDriverLat(data.petaTracking?.kurirLat ?? null);
+        setLiveDriverLng(data.petaTracking?.kurirLng ?? null);
         const orderId = data.detailPesanan?.id_pesanan ?? data.pesananAktif?.id_pesanan;
         if (orderId) {
           fetchEtaAI(orderId)
-            .then((eta) => setAiEtaLabel(eta.label))
+            .then((eta) => {
+              setAiEtaLabel(eta.label);
+              setAiEtaMenit(eta.estimasiMenit);
+            })
             .catch(() => {});
         }
       })
       .catch(() => setPageStatus("error"));
-  }, [fetchKey]);
+  }, [fetchKey, selectedIdPesanan]);
+
+  // Poll courier GPS every 5 s whenever a courier is assigned
+  const idKurir = apiData?.infoKurir?.id ?? null;
+  useEffect(() => {
+    if (!idKurir) return;
+    const poll = () => {
+      fetchKurirPosisi(idKurir)
+        .then(({ lat, lng }) => {
+          if (lat !== null && lng !== null) {
+            setLiveDriverLat(lat);
+            setLiveDriverLng(lng);
+          }
+        })
+        .catch(() => {});
+    };
+    poll();
+    const timer = setInterval(poll, GPS_POLL_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [idKurir]);
 
   const handleRefresh = () => setFetchKey((k) => k + 1);
+
+  const handleSelectOrder = (kodePesanan: string) => {
+    const matched = apiData?.semuaPesananAktif?.find(o => o.kodePesanan === kodePesanan);
+    if (matched && matched.id_pesanan !== (apiData?.detailPesanan?.id_pesanan ?? apiData?.pesananAktif?.id_pesanan)) {
+      setSelectedIdPesanan(matched.id_pesanan);
+    }
+  };
 
   const trackingOrder = useMemo(
     () => (apiData ? mapToTrackingOrder(apiData, aiEtaLabel) : null),
     [apiData, aiEtaLabel],
   );
+
+  const allSwitcherOrders = useMemo((): TrackingOrder[] => {
+    const list = apiData?.semuaPesananAktif;
+    if (!list?.length || !trackingOrder) return trackingOrder ? [trackingOrder] : [];
+    return list.map(o => ({
+      id: o.kodePesanan,
+      service: o.namaLayanan,
+      statusLabel: formatStatusLabel(o.status),
+      statusDescription: "",
+      tone: "active" as const,
+      eta: "-",
+      progress: o.progress,
+      updatedAt: "",
+      weight: `${o.berat} kg`,
+      total: formatRupiah(o.total),
+      pickupWindow: o.waktu ? formatWaktu(o.waktu) : "-",
+      outlet: "-",
+      payment: null,
+      pickup: { label: "", address: "", note: "" },
+      dropoff: { label: "", address: "", note: "" },
+      courier: null,
+      timeline: [],
+    }));
+  }, [apiData, trackingOrder]);
 
   const effectiveStatus = propStatus !== "ready" ? propStatus : pageStatus;
 
@@ -224,13 +289,15 @@ export function TrackingPage({ status: propStatus = "ready" }: TrackingPageProps
       </div>
 
       <div className="relative z-10 space-y-5">
-        <TrackingHero order={trackingOrder} insights={STATIC_INSIGHTS} onRefresh={handleRefresh} />
+        <TrackingHero order={trackingOrder} insights={STATIC_INSIGHTS} fetchedAt={fetchedAt} onRefresh={handleRefresh} />
 
-        <TrackingOrderSwitcher
-          orders={[trackingOrder]}
-          selectedOrderId={trackingOrder.id}
-          onSelectOrder={() => {}}
-        />
+        {allSwitcherOrders.length > 1 && (
+          <TrackingOrderSwitcher
+            orders={allSwitcherOrders}
+            selectedOrderId={trackingOrder.id}
+            onSelectOrder={handleSelectOrder}
+          />
+        )}
 
         {/* Peta pelacakan real-time */}
         {apiData?.petaTracking?.outletLat && apiData.petaTracking.outletLng ? (
@@ -240,18 +307,48 @@ export function TrackingPage({ status: propStatus = "ready" }: TrackingPageProps
             outletName={trackingOrder.outlet}
             userLat={apiData.petaTracking.userLat}
             userLng={apiData.petaTracking.userLng}
-            driverLat={apiData.petaTracking.kurirLat}
-            driverLng={apiData.petaTracking.kurirLng}
+            driverLat={liveDriverLat}
+            driverLng={liveDriverLng}
           />
         ) : (
           <MapViewPlaceholder />
         )}
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-stretch 2xl:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="min-w-0">
-            <TrackingTimeline steps={trackingOrder.timeline} />
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_420px]">
+          <div className="min-w-0 space-y-5">
+            <TrackingTimeline
+          steps={trackingOrder.timeline}
+          estNextStep={
+            aiEtaMenit != null
+              ? new Date(Date.now() + aiEtaMenit * 60_000).toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                })
+              : undefined
+          }
+        />
+            <section className="rounded-[32px] border border-primary-100 bg-white p-5 shadow-[0_8px_24px_rgba(0,88,202,0.06)] sm:p-6">
+              <p className="text-sm font-semibold text-primary-700">Quality checkpoint</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {STATIC_CHECKPOINTS.map((checkpoint) => {
+                  const Icon = checkpoint.icon;
+                  return (
+                    <article key={checkpoint.title} className="flex items-start gap-3 rounded-2xl border border-primary-100 bg-primary-50/60 p-4">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary-100 text-primary-600">
+                        <Icon className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                      <div>
+                        <h3 className="text-sm font-extrabold text-[var(--odong-text)]">{checkpoint.title}</h3>
+                        <p className="mt-1 text-xs leading-5 text-[var(--odong-muted)]">{checkpoint.description}</p>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
           </div>
-          <TrackingSidePanel order={trackingOrder} checkpoints={STATIC_CHECKPOINTS} />
+          <TrackingSidePanel order={trackingOrder} />
         </div>
 
         <span className="sr-only" aria-live="polite">

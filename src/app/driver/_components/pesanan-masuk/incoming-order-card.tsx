@@ -90,7 +90,7 @@ export function IncomingOrderCard({
           </span>
           <div className="min-w-0">
             <p className="truncate text-xs font-extrabold uppercase tracking-[0.16em] text-[var(--odong-muted-soft)]">
-              {order.id}
+              {order.kodePesanan}
             </p>
             <h2 className="mt-1 truncate text-xl font-extrabold text-[var(--odong-text)]">
               {order.customerName}

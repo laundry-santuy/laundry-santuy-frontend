@@ -63,9 +63,12 @@ function mapActiveOrder(raw: NonNullable<BerandaResponse["pesananAktif"]>): Acti
   const progress: ProgressItem[] = raw.progress ?? [];
   return {
     id: raw.kodePesanan,
+    pesananId: raw.id_pesanan,
     service: raw.namaLayanan,
     weight: `${raw.berat} kg`,
     eta: raw.eta,
+    metodePembayaran: raw.metodePembayaran ?? null,
+    statusPembayaran: raw.statusPembayaran ?? null,
     steps: mapProgressToSteps(progress),
     courier: raw.kurir
       ? {

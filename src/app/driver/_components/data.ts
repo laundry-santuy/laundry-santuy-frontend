@@ -1,5 +1,6 @@
 import {
   Bell,
+  History,
   LayoutGrid,
   MapPinned,
   PackageCheck,
@@ -31,6 +32,11 @@ export const driverNavItems: DriverNavItem[] = [
     icon: LayoutGrid,
   },
   {
+    label: "Riwayat",
+    href: "/driver/riwayat",
+    icon: History,
+  },
+  {
     label: "Profil",
     href: "/driver/profil",
     icon: UserRound,
@@ -46,6 +52,7 @@ export const driverQuickStats = [
 export const driverIncomingOrders: DriverIncomingOrder[] = [
   {
     id: "LS-2026-0456",
+    kodePesanan: "#LS-456",
     queueNumber: "#1",
     customerName: "Budi Santoso",
     customerInitials: "BS",
@@ -60,6 +67,7 @@ export const driverIncomingOrders: DriverIncomingOrder[] = [
   },
   {
     id: "LS-2026-0457",
+    kodePesanan: "#LS-457",
     queueNumber: "#2",
     customerName: "Siti Nurhaliza",
     customerInitials: "SN",
@@ -74,6 +82,7 @@ export const driverIncomingOrders: DriverIncomingOrder[] = [
   },
   {
     id: "LS-2026-0458",
+    kodePesanan: "#LS-458",
     queueNumber: "#3",
     customerName: "Ahmad Fauzi",
     customerInitials: "AF",
@@ -88,6 +97,7 @@ export const driverIncomingOrders: DriverIncomingOrder[] = [
   },
   {
     id: "LS-2026-0459",
+    kodePesanan: "#LS-459",
     queueNumber: "#4",
     customerName: "Maya Putri",
     customerInitials: "MP",

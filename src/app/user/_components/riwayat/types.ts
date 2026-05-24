@@ -35,6 +35,7 @@ export type HistoryOrder = {
   courier: string;
   rating?: number;
   note: string;
+  fotoBuktiUrl: string | null;
   items: HistoryOrderItem[];
 };
 

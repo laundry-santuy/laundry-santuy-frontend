@@ -72,6 +72,7 @@ export const activeOrders: DriverActiveOrder[] = [
   {
     id: "LS-2026-0456",
     queueNumber: "#1",
+    kodePesanan: "#LS-456",
     customerName: "Dewi Kartika",
     customerInitials: "DK",
     phone: "0815-9876-5432",
@@ -82,10 +83,12 @@ export const activeOrders: DriverActiveOrder[] = [
     pickupTime: "14:00",
     currentStage: "menuju-lokasi",
     note: "Ambil dari lobby depan, keamanan sudah diinformasikan.",
+    fotoBuktiUrl: null,
   },
   {
     id: "LS-2026-0457",
     queueNumber: "#2",
+    kodePesanan: "#LS-457",
     customerName: "Siti Nurhaliza",
     customerInitials: "SN",
     phone: "0813-5678-9012",
@@ -96,10 +99,12 @@ export const activeOrders: DriverActiveOrder[] = [
     pickupTime: "14:30",
     currentStage: "menuju-lokasi",
     note: "Pelanggan menunggu di depan rumah, hubungi 5 menit sebelum tiba.",
+    fotoBuktiUrl: null,
   },
   {
     id: "LS-2026-0458",
     queueNumber: "#3",
+    kodePesanan: "#LS-458",
     customerName: "Ahmad Fauzi",
     customerInitials: "AF",
     phone: "0812-1122-3344",
@@ -110,10 +115,12 @@ export const activeOrders: DriverActiveOrder[] = [
     pickupTime: "15:15",
     currentStage: "dijemput",
     note: "Tas laundry sudah diserahkan, lanjut ke outlet Kemang.",
+    fotoBuktiUrl: null,
   },
   {
     id: "LS-2026-0459",
     queueNumber: "#4",
+    kodePesanan: "#LS-459",
     customerName: "Maya Putri",
     customerInitials: "MP",
     phone: "0815-7788-9900",
@@ -124,10 +131,12 @@ export const activeOrders: DriverActiveOrder[] = [
     pickupTime: "16:00",
     currentStage: "di-laundry",
     note: "Sedang diproses di area bedding, target selesai sore ini.",
+    fotoBuktiUrl: null,
   },
   {
     id: "LS-2026-0460",
     queueNumber: "#5",
+    kodePesanan: "#LS-460",
     customerName: "Raka Pratama",
     customerInitials: "RP",
     phone: "0819-4455-6677",
@@ -138,6 +147,7 @@ export const activeOrders: DriverActiveOrder[] = [
     pickupTime: "17:00",
     currentStage: "diantar",
     note: "Order sudah selesai dan siap kembali ke pelanggan.",
+    fotoBuktiUrl: null,
   },
 ];
 

@@ -64,6 +64,7 @@ export const historyOrders: HistoryOrder[] = [
     address: "Jl. Melati Raya No. 24, Jakarta Selatan",
     courier: "Ahmad",
     note: "Sedang masuk tahap setrika rapi sebelum quality check.",
+    fotoBuktiUrl: null,
     items: [
       { name: "Cuci + Setrika", quantity: "2.5 kg", price: "Rp25.000" },
       { name: "Pewangi premium", quantity: "1x", price: "Rp3.000" },
@@ -87,6 +88,7 @@ export const historyOrders: HistoryOrder[] = [
     courier: "Ahmad",
     rating: 5,
     note: "Pakaian selesai, dikirim kembali, dan diterima pelanggan.",
+    fotoBuktiUrl: null,
     items: [
       { name: "Cuci + Setrika", quantity: "3 kg", price: "Rp30.000" },
       { name: "Voucher SANTUY20", quantity: "1x", price: "-Rp8.000" },
@@ -109,6 +111,7 @@ export const historyOrders: HistoryOrder[] = [
     address: "Gedung Teknik, pintu lobby utama",
     courier: "Nadia",
     note: "Order express selesai dan menunggu pengantaran kembali.",
+    fotoBuktiUrl: null,
     items: [
       { name: "Express", quantity: "1.5 kg", price: "Rp27.000" },
       { name: "Anti noda", quantity: "Included", price: "Rp0" },
@@ -131,6 +134,7 @@ export const historyOrders: HistoryOrder[] = [
     courier: "Raka",
     rating: 4.8,
     note: "Seprai dan bed cover selesai dicuci higienis.",
+    fotoBuktiUrl: null,
     items: [
       { name: "Bedding Care", quantity: "2 item", price: "Rp50.000" },
       { name: "Pickup bedding", quantity: "Gratis", price: "Rp0" },
@@ -152,6 +156,7 @@ export const historyOrders: HistoryOrder[] = [
     address: "Jl. Melati Raya No. 24, Jakarta Selatan",
     courier: "Belum ditugaskan",
     note: "Order dibatalkan sebelum pickup karena jadwal berubah.",
+    fotoBuktiUrl: null,
     items: [
       { name: "Cuci Kiloan", quantity: "2 kg", price: "Rp14.000" },
       { name: "Refund", quantity: "Diproses", price: "-Rp14.000" },

@@ -8,9 +8,12 @@ import type { ActiveOrder, RecentOrder, Reminder } from "./types";
 
 export const activeOrder: ActiveOrder = {
   id: "#LS-004",
+  pesananId: "mock-id",
   service: "Cuci + Setrika",
   weight: "2.5 kg",
   eta: "ETA: 2 jam",
+  metodePembayaran: null,
+  statusPembayaran: null,
   steps: [
     { label: "Diterima", icon: Package, status: "done" },
     { label: "Dicuci", icon: Package, status: "done" },
@@ -22,6 +25,7 @@ export const activeOrder: ActiveOrder = {
     rating: 4.8,
     vehicle: "Honda Beat B 1234 XY",
     distance: "Kurir ~1.2 km dari laundry",
+    noTelepon: null,
   },
   courierInitials: "AH",
 };

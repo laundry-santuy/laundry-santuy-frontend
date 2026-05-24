@@ -2,6 +2,8 @@ import { apiClient } from './api-client';
 import type {
   DriverActiveOrder,
   DriverActiveProcessStage,
+  DriverHistoryOrder,
+  DriverHistoryStats,
   DriverIncomingOrder,
   DriverOrderStatus,
 } from '@/app/driver/_components/types';
@@ -48,13 +50,14 @@ const stageKeyToFE: Record<string, DriverActiveProcessStage> = {
 // ── Pesanan Masuk ─────────────────────────────────────────────────────────────
 
 type RawIncomingOrder = {
-  id_pesanan:  string;
-  nomorUrut:   number;
-  waktuJemput: string | null;
-  status:      string;
-  customer:    { nama: string; inisial: string; telepon: string; alamat: string };
-  layanan:     { nama: string; estimasiBeratKg: number };
-  estimasi:    { jarakKm: number; harga: number };
+  id_pesanan:   string;
+  kodePesanan?: string;
+  nomorUrut:    number;
+  waktuJemput:  string | null;
+  status:       string;
+  customer:     { nama: string; inisial: string; telepon: string; alamat: string };
+  layanan:      { nama: string; estimasiBeratKg: number };
+  estimasi:     { jarakKm: number; harga: number };
 };
 
 type PesananMasukResponse = {
@@ -65,6 +68,7 @@ type PesananMasukResponse = {
 function mapIncomingOrder(raw: RawIncomingOrder): DriverIncomingOrder {
   return {
     id:             raw.id_pesanan,
+    kodePesanan:    raw.kodePesanan ?? `#LS-${raw.id_pesanan.slice(-3)}`,
     queueNumber:    `#${raw.nomorUrut}`,
     customerName:   raw.customer.nama,
     customerInitials: raw.customer.inisial,
@@ -92,12 +96,14 @@ export async function fetchPesananMasuk() {
 type RawProgressItem = { key: string; label: string; done: boolean; active: boolean };
 
 type RawActiveOrder = {
-  id_pesanan: string;
-  nomorUrut:  number;
-  progress:   RawProgressItem[];
-  catatan:    string;
-  customer:   { nama: string; inisial: string; telepon: string; alamat: string };
-  layanan:    { nama: string; beratKg: number; waktuJemput: string | null; totalHarga: number };
+  id_pesanan:    string;
+  kodePesanan?:  string;
+  nomorUrut:     number;
+  progress:      RawProgressItem[];
+  catatan:       string;
+  foto_bukti_url?: string | null;
+  customer:      { nama: string; inisial: string; telepon: string; alamat: string };
+  layanan:       { nama: string; beratKg: number; waktuJemput: string | null; totalHarga: number };
 };
 
 type PesananAktifResponse = { pesanan: RawActiveOrder[] };
@@ -109,6 +115,7 @@ function mapActiveOrder(raw: RawActiveOrder): DriverActiveOrder {
   return {
     id:               raw.id_pesanan,
     queueNumber:      `#${raw.nomorUrut}`,
+    kodePesanan:      raw.kodePesanan ?? `#LS-${raw.id_pesanan.slice(-3).toUpperCase()}`,
     customerName:     raw.customer.nama,
     customerInitials: raw.customer.inisial,
     phone:            raw.customer.telepon,
@@ -118,7 +125,8 @@ function mapActiveOrder(raw: RawActiveOrder): DriverActiveOrder {
     totalPrice:       formatRupiah(raw.layanan.totalHarga),
     pickupTime:       formatJam(raw.layanan.waktuJemput),
     currentStage,
-    note:             raw.catatan ?? '',
+    note:         raw.catatan ?? '',
+    fotoBuktiUrl: raw.foto_bukti_url ?? null,
   };
 }
 
@@ -138,9 +146,10 @@ export async function updatePesananStatus(
 
 export async function uploadFotoBukti(
   id_pesanan: string,
-  foto_url: string,
-): Promise<{ success: boolean; message: string }> {
-  return apiClient.patch(`/api/driver/pesanan/${id_pesanan}/bukti`, { foto_url });
+  foto_base64: string,
+  mime_type = 'image/jpeg',
+): Promise<{ success: boolean; message: string; data?: { foto_url: string } }> {
+  return apiClient.patch(`/api/driver/pesanan/${id_pesanan}/bukti`, { foto_base64, mime_type });
 }
 
 // ── Profil ────────────────────────────────────────────────────────────────────
@@ -196,4 +205,32 @@ export type DriverNotifikasi = {
 
 export async function fetchNotifikasi(): Promise<{ notifikasi: DriverNotifikasi[] }> {
   return apiClient.get<{ notifikasi: DriverNotifikasi[] }>('/api/driver/notifikasi');
+}
+
+// ── Riwayat ───────────────────────────────────────────────────────────────────
+
+export type DriverRiwayatResponse = {
+  stats: DriverHistoryStats;
+  riwayat: DriverHistoryOrder[];
+};
+
+export async function fetchRiwayatDriver(params?: {
+  q?: string;
+  status?: string;
+}): Promise<DriverRiwayatResponse> {
+  const qs = params
+    ? new URLSearchParams(
+        Object.entries(params).filter(([, v]) => v != null && v !== '') as [string, string][],
+      ).toString()
+    : '';
+  return apiClient.get<DriverRiwayatResponse>(`/api/driver/riwayat${qs ? `?${qs}` : ''}`);
+}
+
+// ── GPS Lokasi ────────────────────────────────────────────────────────────────
+
+export async function updateLokasiKurir(
+  lat: number,
+  lng: number,
+): Promise<{ success: boolean; message: string; skipped?: boolean }> {
+  return apiClient.put('/api/driver/lokasi', { lat, lng });
 }

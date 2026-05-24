@@ -18,9 +18,12 @@ export type CourierInfo = {
 
 export type ActiveOrder = {
   id: string;
+  pesananId: string;
   service: string;
   weight: string;
   eta: string;
+  metodePembayaran: string | null;
+  statusPembayaran: string | null;
   steps: ActiveOrderStep[];
   courier: CourierInfo | null;
   courierInitials: string;

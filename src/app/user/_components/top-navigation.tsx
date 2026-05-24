@@ -1,10 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Bell, LogOut, Menu, Moon, Shirt, Sun, UserRound, X } from "lucide-react";
+import { Bell, Loader2, LogOut, Menu, Moon, Package, Shirt, Sun, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { fetchBeranda, formatWaktu, mapBeStatus, type BerandaResponse } from "@/lib/user-api";
 
 const navItems = [
   { label: "Beranda", href: "/user/beranda" },
@@ -33,6 +34,119 @@ function getInitials(usn: string): string {
   const parts = usn.trim().split(/[\s._@]+/).filter(Boolean);
   if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   return usn.substring(0, 2).toUpperCase();
+}
+
+function NotifButton({ className }: { className?: string }) {
+  const [open, setOpen] = useState(false);
+  const [seen, setSeen] = useState(false);
+  const [data, setData] = useState<BerandaResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open || data) return;
+    setLoading(true);
+    fetchBeranda()
+      .then((d) => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [open, data]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
+
+  const hasUnread = !seen && Boolean(data?.ringkasan?.pesananAktif);
+  const recents = data?.pesananTerbaru ?? [];
+
+  const handleToggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) setSeen(true);
+  };
+
+  return (
+    <div className={cn("relative", className)} ref={ref}>
+      <button
+        type="button"
+        aria-label="Notifikasi"
+        aria-expanded={open}
+        onClick={handleToggle}
+        className="relative flex size-10 items-center justify-center rounded-full border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-text)] shadow-[0_3px_8px_rgba(25,28,29,0.06)] backdrop-blur-md transition duration-300 hover:border-primary-100 hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+      >
+        <Bell className="size-4" aria-hidden="true" />
+        {hasUnread && (
+          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-neutral-900" aria-hidden="true" />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-[calc(100%+8px)] z-[60] w-[min(320px,calc(100vw-32px))] rounded-[24px] border border-[var(--odong-border)] bg-[var(--odong-nav-bg)] p-4 shadow-[0_14px_34px_rgba(25,28,29,0.14)] backdrop-blur-xl">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-extrabold text-[var(--odong-text)]">Notifikasi</p>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Tutup notifikasi"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--odong-surface-strong)] text-[var(--odong-muted)] transition hover:text-[var(--odong-text)]"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-primary-600" />
+            </div>
+          ) : recents.length === 0 ? (
+            <div className="py-6 text-center">
+              <Bell className="mx-auto mb-2 h-8 w-8 text-primary-200" aria-hidden="true" />
+              <p className="text-sm text-[var(--odong-muted)]">Tidak ada notifikasi</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {recents.slice(0, 5).map((item) => {
+                const mappedStatus = mapBeStatus(item.status);
+                const isDone = mappedStatus === "Selesai" || mappedStatus === "Dibatalkan";
+                return (
+                  <Link
+                    key={item.id_pesanan}
+                    href="/user/riwayat"
+                    onClick={() => setOpen(false)}
+                    className="flex items-start gap-3 rounded-2xl p-3 transition hover:bg-[var(--odong-surface-strong)]"
+                  >
+                    <span className={cn(
+                      "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl",
+                      isDone ? "bg-emerald-50 text-emerald-600" : "bg-primary-50 text-primary-600",
+                    )}>
+                      <Package className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-extrabold text-[var(--odong-text)]">{item.namaLayanan}</p>
+                      <p className="text-[11px] font-semibold text-[var(--odong-muted)]">{item.kodePesanan} · {mappedStatus}</p>
+                      <p className="mt-0.5 text-[11px] text-[var(--odong-muted)]">{formatWaktu(item.waktu)}</p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          <Link
+            href="/user/riwayat"
+            onClick={() => setOpen(false)}
+            className="mt-3 block rounded-xl border border-primary-100 bg-primary-50 py-2 text-center text-xs font-bold text-primary-700 transition hover:bg-primary-100"
+          >
+            Lihat semua riwayat
+          </Link>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function UserTopNavigation() {
@@ -159,13 +273,7 @@ export function UserTopNavigation() {
             <ThemeIcon className="size-4" aria-hidden="true" />
           </button>
 
-          <button
-            type="button"
-            aria-label="Notifikasi"
-            className="relative flex size-10 items-center justify-center rounded-full border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-text)] shadow-[0_3px_8px_rgba(25,28,29,0.06)] backdrop-blur-md transition duration-300 hover:border-primary-100 hover:text-primary-600"
-          >
-            <Bell className="size-4" />
-          </button>
+          <NotifButton />
 
           <Link
             href="/user/profil"
@@ -218,13 +326,7 @@ export function UserTopNavigation() {
             <ThemeIcon className="size-4" aria-hidden="true" />
           </button>
 
-          <button
-            type="button"
-            aria-label="Notifikasi"
-            className="relative flex size-10 items-center justify-center rounded-full border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] text-[var(--odong-text)] shadow-[0_3px_8px_rgba(25,28,29,0.06)] backdrop-blur-md"
-          >
-            <Bell className="size-4" />
-          </button>
+          <NotifButton />
 
           <Link
             href="/user/profil"

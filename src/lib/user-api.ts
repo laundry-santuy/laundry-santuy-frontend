@@ -34,6 +34,8 @@ export type BerandaResponse = {
     total: number;
     status: string;
     eta: string;
+    metodePembayaran: string | null;
+    statusPembayaran: string | null;
     progress: { label: string; completed: boolean }[];
     kurir: {
       nama: string;
@@ -96,6 +98,7 @@ export type LacakResponse = {
     waktu: string | null;
   } | null;
   infoKurir: {
+    id: string;
     inisial: string;
     nama: string;
     rating: number;
@@ -113,6 +116,16 @@ export type LacakResponse = {
     userLat?: number | null;
     userLng?: number | null;
   } | null;
+  semuaPesananAktif: {
+    id_pesanan: string;
+    kodePesanan: string;
+    namaLayanan: string;
+    status: string;
+    berat: number;
+    total: number;
+    waktu: string | null;
+    progress: number;
+  }[];
   riwayatSingkat: {
     id_pesanan: string;
     kodePesanan: string;
@@ -137,6 +150,13 @@ export type RiwayatResponse = {
     total: number;
     status: string;
     waktu: string | null;
+    waktuJemput: string | null;
+    catatan: string | null;
+    alamatPenjemputan: string | null;
+    metodePembayaran: string | null;
+    namaKurir: string | null;
+    statusPembayaran: string | null;
+    fotoBuktiUrl: string | null;
   }[];
 };
 
@@ -179,6 +199,7 @@ export type CreatePesananBody = {
   catatan?: string;
   alamat_penjemputan?: string;
   metode_pembayaran?: string;
+  addon_ids?: string[];
 };
 
 export type CreatePesananResponse = {
@@ -298,6 +319,22 @@ export async function fetchBeranda(): Promise<BerandaResponse> {
   return apiClient.get<BerandaResponse>('/api/user/beranda');
 }
 
+export async function konfirmasiBayarUser(id: string): Promise<{ success: boolean; message: string }> {
+  return apiClient.patch(`/api/user/pesanan/${id}/konfirmasi-bayar`, {});
+}
+
+export type RekomendasiAIResponse = {
+  rekomendasiLayanan: string;
+  badge: string;
+  insight: string;
+  estimasiWaktu: string;
+  source: 'ai' | 'fallback';
+};
+
+export async function fetchRekomendasiAI(): Promise<RekomendasiAIResponse> {
+  return apiClient.get<RekomendasiAIResponse>('/api/user/rekomendasi');
+}
+
 export async function fetchPromoAktif(): Promise<PromoAktifResponse> {
   return apiClient.get<PromoAktifResponse>('/api/user/promo');
 }
@@ -306,8 +343,9 @@ export async function fetchPesan(): Promise<PesanResponse> {
   return apiClient.get<PesanResponse>('/api/user/pesan');
 }
 
-export async function fetchLacak(): Promise<LacakResponse> {
-  return apiClient.get<LacakResponse>('/api/user/lacak');
+export async function fetchLacak(id_pesanan?: string): Promise<LacakResponse> {
+  const qs = id_pesanan ? `?id_pesanan=${encodeURIComponent(id_pesanan)}` : '';
+  return apiClient.get<LacakResponse>(`/api/user/lacak${qs}`);
 }
 
 export async function fetchRiwayat(params?: {
@@ -376,4 +414,14 @@ export type EtaAIResponse = {
 
 export async function fetchEtaAI(id_pesanan: string): Promise<EtaAIResponse> {
   return apiClient.get<EtaAIResponse>(`/api/user/eta/${id_pesanan}`);
+}
+
+export type KurirPosisiResponse = {
+  lat: number | null;
+  lng: number | null;
+  updatedAt: string | null;
+};
+
+export async function fetchKurirPosisi(id_kurir: string): Promise<KurirPosisiResponse> {
+  return apiClient.get<KurirPosisiResponse>(`/api/user/kurir-posisi/${id_kurir}`);
 }

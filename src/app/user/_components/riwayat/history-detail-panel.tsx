@@ -1,15 +1,16 @@
-import Link from "next/link";
+"use client";
+
 import {
-  ArrowRight,
   CalendarClock,
   Download,
+  ImageIcon,
   MapPin,
   ReceiptText,
-  RotateCcw,
   Star,
   Truck,
   Wallet,
 } from "lucide-react";
+import { generateInvoice } from "@/lib/generate-invoice";
 import { PaymentStatusBadge } from "./history-status-badge";
 import type { HistoryOrder } from "./types";
 
@@ -59,7 +60,7 @@ export function HistoryDetailPanel({ order }: HistoryDetailPanelProps) {
             {order.total}
           </p>
           <p className="mt-1 text-sm text-[var(--odong-muted)]">
-            {order.paymentMethod} - {order.date}
+            {order.paymentMethod && order.paymentMethod !== "-" ? `${order.paymentMethod} · ` : ""}{order.date}
           </p>
         </div>
 
@@ -67,7 +68,7 @@ export function HistoryDetailPanel({ order }: HistoryDetailPanelProps) {
           {[
             {
               label: "Jadwal",
-              value: `${order.date}, ${order.time}`,
+              value: order.time && order.time !== "-" ? `${order.date}, ${order.time}` : order.date,
               icon: CalendarClock,
             },
             {
@@ -114,6 +115,24 @@ export function HistoryDetailPanel({ order }: HistoryDetailPanelProps) {
         </div>
       </section>
 
+      {order.fotoBuktiUrl && (
+        <section className="rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-6 shadow-[0_14px_34px_rgba(25,28,29,0.045)] backdrop-blur-xl">
+          <p className="mb-3 flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.14em] text-emerald-600">
+            <ImageIcon className="h-4 w-4" aria-hidden="true" />
+            Foto bukti pengantaran
+          </p>
+          <a
+            href={order.fotoBuktiUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border-2 border-emerald-400 bg-white text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 active:scale-[0.98] dark:border-emerald-700 dark:bg-transparent dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+          >
+            <ImageIcon className="h-4 w-4" aria-hidden="true" />
+            Lihat foto
+          </a>
+        </section>
+      )}
+
       <section className="rounded-[32px] border border-[var(--odong-border)] bg-[var(--odong-surface-soft)] p-6 shadow-[0_14px_34px_rgba(25,28,29,0.045)] backdrop-blur-xl">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -121,7 +140,7 @@ export function HistoryDetailPanel({ order }: HistoryDetailPanelProps) {
               Catatan order
             </p>
             <p className="mt-2 text-sm leading-6 text-[var(--odong-muted)]">
-              {order.note}
+              {order.note && order.note !== "-" ? order.note : "Tidak ada catatan"}
             </p>
           </div>
           {order.rating ? (
@@ -135,23 +154,36 @@ export function HistoryDetailPanel({ order }: HistoryDetailPanelProps) {
           ) : null}
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-primary-100 bg-primary-50 px-4 text-sm font-bold text-primary-700 transition hover:-translate-y-0.5 hover:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
-          >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            Invoice
-          </button>
-          <Link
-            href="/user/pesan"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-bold text-white shadow-[0_12px_24px_rgba(0,88,202,0.18)] transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
-          >
-            <RotateCcw className="h-4 w-4" aria-hidden="true" />
-            Ulangi
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
-        </div>
+        {(() => {
+          const invoiceReady =
+            order.status === "Selesai" &&
+            order.paymentStatus === "Lunas" &&
+            !!order.fotoBuktiUrl;
+          const reason = order.status !== "Selesai"
+            ? "Invoice tersedia setelah order selesai"
+            : order.paymentStatus !== "Lunas"
+              ? "Menunggu konfirmasi pembayaran dari outlet"
+              : "Menunggu foto bukti pengantaran dari kurir";
+          return (
+            <div className="mt-5 space-y-1.5">
+              <button
+                type="button"
+                disabled={!invoiceReady}
+                onClick={() => invoiceReady && generateInvoice(order)}
+                title={!invoiceReady ? reason : undefined}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-primary-100 bg-primary-50 px-4 text-sm font-bold text-primary-700 transition hover:-translate-y-0.5 hover:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:bg-primary-50"
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Download Invoice
+              </button>
+              {!invoiceReady && (
+                <p className="text-center text-xs text-[var(--odong-muted)]">
+                  {reason}
+                </p>
+              )}
+            </div>
+          );
+        })()}
       </section>
     </aside>
   );

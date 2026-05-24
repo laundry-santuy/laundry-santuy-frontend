@@ -160,11 +160,13 @@ export function OrderSummary({
                 value={pickupFee > 0 ? formatCurrency(pickupFee) : "Gratis"}
                 valueClassName={pickupFee === 0 ? "text-emerald-600" : undefined}
               />
-              <SummaryRow
-                label="Promo"
-                value={discount > 0 ? `–${formatCurrency(discount)}` : "–"}
-                valueClassName={discount > 0 ? "text-primary-600" : undefined}
-              />
+              {discount > 0 && (
+                <SummaryRow
+                  label="Promo"
+                  value={`–${formatCurrency(discount)}`}
+                  valueClassName="text-primary-600"
+                />
+              )}
             </div>
 
             <div className="mt-4 flex items-end justify-between gap-4 border-t border-[var(--odong-border)] pt-4">

@@ -312,6 +312,7 @@ export function updateProfilAdmin(body: UpdateAdminProfilBody): Promise<{ messag
 
 export type ManajemenPesananOrder = {
   id_pesanan: string;
+  kodePesanan?: string;
   orderIdUI?: string;
   date?: string | null;
   customer?: { name?: string; initials?: string } | null;
@@ -321,6 +322,8 @@ export type ManajemenPesananOrder = {
   harga?: number | null;
   status?: string | null;
   statusAsli?: string | null;
+  statusPembayaran?: string | null;
+  fotoBuktiUrl?: string | null;
 };
 
 export type ManajemenPesananResponse = {
@@ -361,6 +364,10 @@ export function createPesananAdmin(body: CreatePesananAdminBody): Promise<{ mess
 
 export function deletePesananAdmin(id: string): Promise<{ message: string }> {
   return apiClient.del(`/api/admin/pesanan/${id}`);
+}
+
+export function konfirmasiPembayaran(id: string): Promise<{ success: boolean; message: string }> {
+  return apiClient.patch(`/api/admin/pesanan/${id}/konfirmasi-pembayaran`, {});
 }
 
 export function updateLayanan(
