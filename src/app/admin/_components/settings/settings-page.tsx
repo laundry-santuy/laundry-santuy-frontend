@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Bolt,
@@ -547,6 +547,11 @@ export function AdminSettingsPage({
   const [outletPanelKey, setOutletPanelKey] = useState(0);
   const [qrisFile, setQrisFile] = useState<File | null>(null);
   const [qrisPreview, setQrisPreview] = useState<string | null>(null);
+  const [qrisPreviewError, setQrisPreviewError] = useState<string | null>(null);
+  const [qrisPreviewWarning, setQrisPreviewWarning] = useState<string | null>(null);
+  const [qrisUploading, setQrisUploading] = useState(false);
+  const [qrisUploadError, setQrisUploadError] = useState<string | null>(null);
+  const qrisUploadPromiseRef = useRef<Promise<void> | null>(null);
   const [promoDraft, setPromoDraft] =
     useState<PromoDraft>(defaultPromoDraft);
   const [promoFeedback, setPromoFeedback] = useState<{
@@ -568,6 +573,63 @@ export function AdminSettingsPage({
     [promoCampaigns],
   );
   const latestActivePromo = promoCampaigns.find((campaign) => campaign.active);
+  const previousQrisPreviewRef = useRef<string | null>(null);
+
+  const inspectQrisPreview = (imageElement: HTMLImageElement) => {
+    try {
+      const canvas = document.createElement("canvas");
+      const sampleSize = 24;
+      canvas.width = sampleSize;
+      canvas.height = sampleSize;
+
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      context.drawImage(imageElement, 0, 0, sampleSize, sampleSize);
+      const { data } = context.getImageData(0, 0, sampleSize, sampleSize);
+
+      let brightnessTotal = 0;
+      let transparentPixels = 0;
+      const pixelCount = data.length / 4;
+
+      for (let index = 0; index < data.length; index += 4) {
+        const red = data[index] ?? 0;
+        const green = data[index + 1] ?? 0;
+        const blue = data[index + 2] ?? 0;
+        const alpha = data[index + 3] ?? 0;
+
+        if (alpha < 24) {
+          transparentPixels += 1;
+          continue;
+        }
+
+        brightnessTotal += (red + green + blue) / 3;
+      }
+
+      const visiblePixels = Math.max(pixelCount - transparentPixels, 1);
+      const averageBrightness = brightnessTotal / visiblePixels;
+      const transparencyRatio = transparentPixels / pixelCount;
+
+      if (transparencyRatio > 0.7 || averageBrightness > 235) {
+        setQrisPreviewWarning("Gambar QRIS terlihat terlalu terang atau transparan. Pastikan file berisi QR hitam yang jelas.");
+      } else {
+        setQrisPreviewWarning(null);
+      }
+    } catch {
+      setQrisPreviewWarning(null);
+    }
+  };
+
+  useEffect(() => {
+    const previousPreview = previousQrisPreviewRef.current;
+    previousQrisPreviewRef.current = qrisPreview;
+
+    return () => {
+      if (previousPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(previousPreview);
+      }
+    };
+  }, [qrisPreview]);
 
   const outletList = outletRecords;
 
@@ -653,7 +715,48 @@ export function AdminSettingsPage({
     setEditOutletDraft(outletDraftFromBackend(outlet));
     setQrisFile(null);
     setQrisPreview(null);
+    setQrisPreviewError(null);
+    setQrisPreviewWarning(null);
+    setQrisUploading(false);
+    setQrisUploadError(null);
     setSaveFeedback(null);
+  };
+
+  const uploadQrisFile = async (file: File, outletId: string) => {
+    setQrisUploading(true);
+    setQrisUploadError(null);
+
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const uploadResult = await uploadQrisOutlet(outletId, base64);
+      const nextQrisUrl = uploadResult.qrisUrl;
+
+      setEditOutletDraft((current) => (current ? { ...current, qrisUrl: nextQrisUrl } : current));
+      setOutletRecords((current) =>
+        current.map((outlet) =>
+          outlet.id_outlet === outletId
+            ? { ...outlet, qrisUrl: nextQrisUrl }
+            : outlet,
+        ),
+      );
+      setQrisFile(null);
+      setQrisPreview(null);
+      setQrisPreviewError(null);
+      setQrisPreviewWarning(null);
+      setSaveFeedback({ tone: "success", message: "QRIS berhasil disimpan ke database." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Gagal menyimpan QRIS.";
+      setQrisUploadError(message);
+      setSaveFeedback({ tone: "error", message });
+    } finally {
+      setQrisUploading(false);
+    }
   };
 
   const handleCreateOutlet = async () => {
@@ -705,6 +808,7 @@ export function AdminSettingsPage({
     }
 
     try {
+      await qrisUploadPromiseRef.current;
       await updatePengaturanOutlet({
         id_outlet: editOutletId,
         namaOutlet: name,
@@ -761,6 +865,8 @@ export function AdminSettingsPage({
       setEditOutletId(null);
       setQrisFile(null);
       setQrisPreview(null);
+      setQrisPreviewError(null);
+      setQrisPreviewWarning(null);
       setSaveFeedback({ tone: "success", message: "Outlet berhasil diperbarui." });
       setOutletPanelKey((key) => key + 1);
     } catch (error) {
@@ -1631,28 +1737,80 @@ export function AdminSettingsPage({
                     const file = e.target.files?.[0];
                     if (!file) return;
                     setQrisFile(file);
-                    const reader = new FileReader();
-                    reader.onload = () => setQrisPreview(reader.result as string);
-                    reader.readAsDataURL(file);
+                    setQrisPreviewError(null);
+                    setQrisPreviewWarning(null);
+                    setQrisPreview(URL.createObjectURL(file));
+                    setQrisUploadError(null);
+                    if (editOutletId) {
+                      const uploadPromise = uploadQrisFile(file, editOutletId);
+                      qrisUploadPromiseRef.current = uploadPromise;
+                      void uploadPromise.finally(() => {
+                        if (qrisUploadPromiseRef.current === uploadPromise) {
+                          qrisUploadPromiseRef.current = null;
+                        }
+                      });
+                    }
                   }}
                 />
-                {qrisPreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={qrisPreview} alt="Preview QRIS" className="h-32 w-32 rounded-2xl object-contain" />
-                ) : editOutletDraft.qrisUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={editOutletDraft.qrisUrl} alt="QRIS saat ini" className="h-32 w-32 rounded-2xl object-contain" />
-                ) : (
-                  <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-(--odong-surface-soft) text-(--odong-muted)">
-                    <Upload className="h-7 w-7" />
-                  </span>
-                )}
+                <div className="flex w-full flex-col items-center justify-center gap-3 rounded-[28px] border border-(--odong-border) bg-(--odong-surface-strong) p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
+                  {qrisPreview || editOutletDraft.qrisUrl ? (
+                    qrisPreviewError ? (
+                      <div className="flex h-44 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-(--odong-border) bg-(--odong-surface-muted) px-4 text-center text-(--odong-text)">
+                        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
+                          <Upload className="h-6 w-6" />
+                        </span>
+                        <p className="text-sm font-bold text-(--odong-text)">Preview QRIS gagal dimuat</p>
+                        <p className="max-w-55 text-xs font-semibold text-(--odong-muted)">
+                          Silakan pilih ulang file gambar, atau cek URL QRIS yang tersimpan.
+                        </p>
+                      </div>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={qrisPreview ?? editOutletDraft.qrisUrl ?? ""}
+                        alt="Preview QRIS"
+                        className="h-48 w-48 rounded-2xl bg-white object-contain p-3 shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
+                        onError={() => setQrisPreviewError("Preview QRIS gagal dimuat")}
+                        onLoad={(event) => {
+                          setQrisPreviewError(null);
+                          inspectQrisPreview(event.currentTarget);
+                        }}
+                      />
+                    )
+                  ) : (
+                    <span className="flex h-44 w-full items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-slate-900 text-slate-300">
+                      <span className="flex flex-col items-center gap-3 text-center">
+                        <Upload className="h-8 w-8" />
+                        <span className="text-sm font-semibold">Belum ada gambar QRIS</span>
+                      </span>
+                    </span>
+                  )}
+                  {qrisPreview || editOutletDraft.qrisUrl ? (
+                    <div className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-[11px] font-semibold text-slate-200">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                      {qrisUploading ? "Menyimpan QRIS..." : "QRIS siap dipakai"}
+                    </div>
+                  ) : null}
+                  {qrisPreviewWarning ? (
+                    <p className="max-w-55 text-center text-[11px] font-semibold text-amber-200">
+                      {qrisPreviewWarning}
+                    </p>
+                  ) : null}
+                  {qrisUploadError ? (
+                    <p className="max-w-55 text-center text-[11px] font-semibold text-rose-200">
+                      {qrisUploadError}
+                    </p>
+                  ) : null}
+                </div>
                 <div className="text-center">
                   <p className="text-sm font-extrabold text-(--odong-text)">
                     {qrisFile ? qrisFile.name : "Klik untuk pilih gambar QRIS"}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-(--odong-muted)">
                     PNG, JPG, atau WebP. Gambar akan disimpan ke Supabase Storage.
+                  </p>
+                  <p className="mt-2 text-[11px] font-medium text-(--odong-muted)">
+                    Pratinjau memakai latar gelap agar QR terlihat jelas.
                   </p>
                 </div>
               </label>
