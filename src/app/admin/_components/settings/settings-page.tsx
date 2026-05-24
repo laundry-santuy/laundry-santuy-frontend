@@ -552,6 +552,7 @@ export function AdminSettingsPage({
   const [qrisUploading, setQrisUploading] = useState(false);
   const [qrisUploadError, setQrisUploadError] = useState<string | null>(null);
   const qrisUploadPromiseRef = useRef<Promise<void> | null>(null);
+  const qrisInputRef = useRef<HTMLInputElement | null>(null);
   const [promoDraft, setPromoDraft] =
     useState<PromoDraft>(defaultPromoDraft);
   const [promoFeedback, setPromoFeedback] = useState<{
@@ -1728,8 +1729,9 @@ export function AdminSettingsPage({
             {/* QRIS Upload */}
             <div className="space-y-3">
               <p className="text-sm font-extrabold text-(--odong-text)">Upload QRIS</p>
-              <label className="flex cursor-pointer flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-(--odong-border) bg-(--odong-surface-muted) p-5 transition hover:border-primary-300 hover:bg-primary-50/40">
+              <div className="flex flex-col items-center gap-3 rounded-3xl border-2 border-dashed border-(--odong-border) bg-(--odong-surface-muted) p-5 transition hover:border-primary-300 hover:bg-primary-50/40">
                 <input
+                  ref={qrisInputRef}
                   type="file"
                   accept="image/*"
                   className="sr-only"
@@ -1741,6 +1743,7 @@ export function AdminSettingsPage({
                     setQrisPreviewWarning(null);
                     setQrisPreview(URL.createObjectURL(file));
                     setQrisUploadError(null);
+                    e.currentTarget.value = "";
                     if (editOutletId) {
                       const uploadPromise = uploadQrisFile(file, editOutletId);
                       qrisUploadPromiseRef.current = uploadPromise;
@@ -1804,7 +1807,7 @@ export function AdminSettingsPage({
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-extrabold text-(--odong-text)">
-                    {qrisFile ? qrisFile.name : "Klik untuk pilih gambar QRIS"}
+                    {qrisFile ? qrisFile.name : "Belum ada file dipilih"}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-(--odong-muted)">
                     PNG, JPG, atau WebP. Gambar akan disimpan ke Supabase Storage.
@@ -1813,7 +1816,14 @@ export function AdminSettingsPage({
                     Pratinjau memakai latar gelap agar QR terlihat jelas.
                   </p>
                 </div>
-              </label>
+                <button
+                  type="button"
+                  onClick={() => qrisInputRef.current?.click()}
+                  className="rounded-full border border-primary-200 bg-primary-50 px-4 py-2 text-xs font-extrabold text-primary-700 transition hover:bg-primary-100"
+                >
+                  {qrisFile ? "Ganti gambar QRIS" : "Pilih gambar QRIS"}
+                </button>
+              </div>
             </div>
 
             <ToggleSetting
