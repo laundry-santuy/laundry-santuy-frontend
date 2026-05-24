@@ -551,7 +551,6 @@ export function AdminSettingsPage({
   const [qrisPreviewWarning, setQrisPreviewWarning] = useState<string | null>(null);
   const [qrisUploading, setQrisUploading] = useState(false);
   const [qrisUploadError, setQrisUploadError] = useState<string | null>(null);
-  const qrisUploadPromiseRef = useRef<Promise<void> | null>(null);
   const qrisInputRef = useRef<HTMLInputElement | null>(null);
   const [promoDraft, setPromoDraft] =
     useState<PromoDraft>(defaultPromoDraft);
@@ -736,25 +735,11 @@ export function AdminSettingsPage({
       });
 
       const uploadResult = await uploadQrisOutlet(outletId, base64);
-      const nextQrisUrl = uploadResult.qrisUrl;
-
-      setEditOutletDraft((current) => (current ? { ...current, qrisUrl: nextQrisUrl } : current));
-      setOutletRecords((current) =>
-        current.map((outlet) =>
-          outlet.id_outlet === outletId
-            ? { ...outlet, qrisUrl: nextQrisUrl }
-            : outlet,
-        ),
-      );
-      setQrisFile(null);
-      setQrisPreview(null);
-      setQrisPreviewError(null);
-      setQrisPreviewWarning(null);
-      setSaveFeedback({ tone: "success", message: "QRIS berhasil disimpan ke database." });
+      return uploadResult.qrisUrl;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Gagal menyimpan QRIS.";
       setQrisUploadError(message);
-      setSaveFeedback({ tone: "error", message });
+      throw error;
     } finally {
       setQrisUploading(false);
     }
@@ -809,7 +794,6 @@ export function AdminSettingsPage({
     }
 
     try {
-      await qrisUploadPromiseRef.current;
       await updatePengaturanOutlet({
         id_outlet: editOutletId,
         namaOutlet: name,
@@ -829,14 +813,7 @@ export function AdminSettingsPage({
 
       let newQrisUrl = editOutletDraft.qrisUrl;
       if (qrisFile && editOutletId) {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(qrisFile);
-        });
-        const uploadResult = await uploadQrisOutlet(editOutletId, base64);
-        newQrisUrl = uploadResult.qrisUrl;
+        newQrisUrl = await uploadQrisFile(qrisFile, editOutletId);
       }
 
       setOutletRecords((current) =>
@@ -1744,15 +1721,6 @@ export function AdminSettingsPage({
                     setQrisPreview(URL.createObjectURL(file));
                     setQrisUploadError(null);
                     e.currentTarget.value = "";
-                    if (editOutletId) {
-                      const uploadPromise = uploadQrisFile(file, editOutletId);
-                      qrisUploadPromiseRef.current = uploadPromise;
-                      void uploadPromise.finally(() => {
-                        if (qrisUploadPromiseRef.current === uploadPromise) {
-                          qrisUploadPromiseRef.current = null;
-                        }
-                      });
-                    }
                   }}
                 />
                 <div className="flex w-full flex-col items-center justify-center gap-3 rounded-[28px] border border-(--odong-border) bg-(--odong-surface-strong) p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
@@ -1808,12 +1776,6 @@ export function AdminSettingsPage({
                 <div className="text-center">
                   <p className="text-sm font-extrabold text-(--odong-text)">
                     {qrisFile ? qrisFile.name : "Belum ada file dipilih"}
-                  </p>
-                  <p className="mt-1 text-xs font-semibold text-(--odong-muted)">
-                    PNG, JPG, atau WebP. Gambar akan disimpan ke Supabase Storage.
-                  </p>
-                  <p className="mt-2 text-[11px] font-medium text-(--odong-muted)">
-                    Pratinjau memakai latar gelap agar QR terlihat jelas.
                   </p>
                 </div>
                 <button
