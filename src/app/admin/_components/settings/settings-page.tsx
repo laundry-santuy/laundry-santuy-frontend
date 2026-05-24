@@ -47,7 +47,6 @@ import { AddonManagementPanel } from "./addon-panel";
 import {
   EmailSettingsPanel,
   SaveStatusCard,
-  SecuritySettingsPanel,
 } from "./settings-side-panels";
 import type { SettingsData } from "./settings-client";
 import { OutletMapPicker } from "./outlet-map-picker";
@@ -56,8 +55,7 @@ type SettingSectionId =
   | "umum"
   | "outlet"
   | "harga-promo"
-  | "email"
-  | "keamanan";
+  | "email";
 
 type SettingSection = {
   id: SettingSectionId;
@@ -90,12 +88,6 @@ const settingSections: SettingSection[] = [
     label: "Email",
     description: "Pengirim notifikasi dan server email.",
     icon: Mail,
-  },
-  {
-    id: "keamanan",
-    label: "Keamanan",
-    description: "Akses akun, sesi, dan autentikasi.",
-    icon: Shield,
   },
 ];
 
@@ -947,7 +939,6 @@ export function AdminSettingsPage({
   const isOutletSection = activeSection === "outlet";
   const isPromoSection = activeSection === "harga-promo";
   const isEmailSection = activeSection === "email";
-  const isSecuritySection = activeSection === "keamanan";
   const mainPanelTitle = isGeneralSection
     ? "Informasi Aplikasi"
     : isOutletSection
@@ -959,8 +950,7 @@ export function AdminSettingsPage({
       ? "Kelola outlet, kontak, dan operasional harian."
     : activeSectionMeta?.description;
   const mainPanelIcon = isGeneralSection ? Globe2 : activeSectionMeta?.icon;
-  const hasWideSidePanel =
-    isOutletSection || isPromoSection || isEmailSection || isSecuritySection;
+  const hasWideSidePanel = isOutletSection || isPromoSection || isEmailSection;
   const settingsGridClass = hasWideSidePanel
     ? "xl:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)]"
     : "xl:grid-cols-[minmax(0,1fr)_340px]";
@@ -1041,7 +1031,7 @@ export function AdminSettingsPage({
 
       <div
         aria-label="Bagian pengaturan"
-        className="grid gap-3 md:grid-cols-2 xl:grid-cols-5"
+        className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"
       >
         {settingSections.map((section) => (
           <SectionLabel
@@ -1523,18 +1513,6 @@ export function AdminSettingsPage({
             </>
           ) : null}
 
-          {isSecuritySection ? (
-            <>
-              <SecuritySettingsPanel
-                settings={settings}
-                onFocusField={focusSettingField}
-                onToggleTwoFactor={() =>
-                  updateSetting("twoFactorRequired", !settings.twoFactorRequired)
-                }
-              />
-              <SaveStatusCard savedAt={savedAt} />
-            </>
-          ) : null}
         </aside>
       </section>
 
