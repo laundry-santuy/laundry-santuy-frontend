@@ -158,12 +158,17 @@ export function PaymentConfirmModal({
               </div>
               <div className="flex flex-col items-center gap-3 rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-5">
                 {qrisUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={qrisUrl}
-                    alt="QRIS"
-                    className="h-44 w-44 rounded-2xl object-contain"
-                  />
+                  <div className="flex h-52 w-52 items-center justify-center rounded-2xl border border-[var(--odong-border)] bg-[var(--odong-surface-muted)] p-3 shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={qrisUrl}
+                      alt="QRIS"
+                      className="h-44 w-44 rounded-xl bg-[var(--odong-surface-strong)] object-contain p-2"
+                      onLoad={(event) => {
+                        event.currentTarget.style.opacity = "1";
+                      }}
+                    />
+                  </div>
                 ) : (
                   <div className="flex h-44 w-44 items-center justify-center rounded-2xl border-2 border-dashed border-[var(--odong-border)] bg-[var(--odong-surface-muted)]">
                     <QrCode className="h-20 w-20 text-[var(--odong-muted-soft)]" />

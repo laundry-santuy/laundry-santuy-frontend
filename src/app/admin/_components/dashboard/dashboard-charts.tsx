@@ -35,7 +35,6 @@ import {
   topOutlets,
 } from "../data";
 
-const yTicks = [0, 15000000, 30000000, 45000000, 60000000];
 const dashboardYears = ["2026", "2025", "2024"] as const;
 
 const monthNames = [
@@ -69,13 +68,15 @@ const orderStatusByYear: Record<DashboardYear, typeof orderStatusDistribution> =
   "2026": orderStatusDistribution,
   "2025": [
     { label: "Selesai", value: 66, color: "#16a34a" },
-    { label: "Diproses", value: 19, color: "#d97706" },
+    { label: "Di Laundry", value: 19, color: "#f59e0b" },
+    { label: "Siap Diantar", value: 10, color: "#0ea5e9" },
     { label: "Menunggu", value: 11, color: "#e11d48" },
     { label: "Dibatalkan", value: 4, color: "#64748b" },
   ],
   "2024": [
     { label: "Selesai", value: 61, color: "#16a34a" },
-    { label: "Diproses", value: 22, color: "#d97706" },
+    { label: "Di Laundry", value: 22, color: "#f59e0b" },
+    { label: "Siap Diantar", value: 10, color: "#0ea5e9" },
     { label: "Menunggu", value: 12, color: "#e11d48" },
     { label: "Dibatalkan", value: 5, color: "#64748b" },
   ],
@@ -95,32 +96,118 @@ const revenueChartConfig = {
 } satisfies ChartConfig;
 
 const statusChartConfig = {
-  completed: {
+  selesai: {
     label: "Selesai",
     color: "#16a34a",
   },
-  processing: {
-    label: "Diproses",
-    color: "#d97706",
+  di_laundry: {
+    label: "Di Laundry",
+    color: "#f59e0b",
   },
-  pending: {
+  siap_diantar: {
+    label: "Siap Diantar",
+    color: "#0ea5e9",
+  },
+  menunggu: {
     label: "Menunggu",
     color: "#e11d48",
   },
-  cancelled: {
+  dibatalkan: {
     label: "Dibatalkan",
     color: "#64748b",
   },
 } satisfies ChartConfig;
 
+const orderStatusPresentation: Record<string, { label: string; color: string }> = {
+  selesai: { label: "Selesai", color: "#16a34a" },
+  di_laundry: { label: "Di Laundry", color: "#f59e0b" },
+  siap_diantar: { label: "Siap Diantar", color: "#0ea5e9" },
+  menunggu: { label: "Menunggu", color: "#e11d48" },
+  dibatalkan: { label: "Dibatalkan", color: "#64748b" },
+};
+
+function normalizeOrderStatus(status: string) {
+  return status.trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function formatOrderStatus(status: string) {
+  const normalizedStatus = normalizeOrderStatus(status);
+  return (
+    orderStatusPresentation[normalizedStatus] ?? {
+      label: status
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]+/g, " ")
+        .replace(/\b\w/g, (character) => character.toUpperCase()),
+      color: "#94a3b8",
+    }
+  );
+}
+
 function formatCurrencyTick(value: number) {
+  if (value >= 1000000) {
+    return formatAbbreviatedRevenue(value / 1000000, "m");
+  }
+
+  if (value >= 1000) {
+    return formatAbbreviatedRevenue(value / 1000, "k");
+  }
+
   return value.toLocaleString("id-ID");
 }
 
-function formatCompactCurrency(value: number) {
-  return `Rp ${(value / 1000000).toLocaleString("id-ID", {
+function formatAbbreviatedRevenue(value: number, suffix: "k" | "m" | "b") {
+  const roundedValue = value >= 100 ? value.toFixed(0) : value.toLocaleString("id-ID", {
     maximumFractionDigits: 1,
-  })} Jt`;
+  });
+
+  return `${roundedValue}${suffix}`;
+}
+
+function formatHoverRevenue(value: number) {
+  if (value >= 1000000) {
+    return `Rp ${(value / 1000000).toLocaleString("id-ID", {
+      maximumFractionDigits: 1,
+    })} jt`;
+  }
+
+  if (value >= 1000) {
+    return `Rp ${(value / 1000).toLocaleString("id-ID", {
+      maximumFractionDigits: 0,
+    })} ribu`;
+  }
+
+  return `Rp ${value.toLocaleString("id-ID")}`;
+}
+
+function buildRevenueTicks(values: number[], tickCount = 5) {
+  const maxValue = Math.max(...values, 0);
+
+  if (maxValue <= 0) {
+    return [0];
+  }
+
+  const rawStep = maxValue / Math.max(tickCount - 1, 1);
+  const exponent = Math.floor(Math.log10(rawStep));
+  const magnitude = 10 ** exponent;
+  const fraction = rawStep / magnitude;
+
+  let niceFraction = 1;
+  if (fraction <= 1) {
+    niceFraction = 1;
+  } else if (fraction <= 2) {
+    niceFraction = 2;
+  } else if (fraction <= 7) {
+    niceFraction = 5;
+  } else {
+    niceFraction = 10;
+  }
+
+  const step = niceFraction * magnitude;
+  const maxTick = Math.ceil(maxValue / step) * step;
+  const tickTotal = Math.max(2, Math.round(maxTick / step) + 1);
+
+  return Array.from({ length: tickTotal }, (_, index) => index * step);
 }
 
 function buildPolyline(
@@ -128,8 +215,9 @@ function buildPolyline(
   width: number,
   height: number,
   padding: number,
+  maxValue: number,
 ) {
-  const maxValue = Math.max(...yTicks);
+  const scaleMaxValue = Math.max(maxValue, 1);
   const chartWidth = width - padding * 2;
   const chartHeight = height - padding * 2;
 
@@ -137,7 +225,7 @@ function buildPolyline(
     .map((value, index) => {
       const x = padding + (chartWidth * index) / Math.max(values.length - 1, 1);
       const y =
-        height - padding - (Math.max(value, 0) / maxValue) * chartHeight;
+        height - padding - (Math.max(value, 0) / scaleMaxValue) * chartHeight;
 
       return `${x},${y}`;
     })
@@ -151,6 +239,7 @@ function getPointPosition({
   width,
   height,
   padding,
+  maxValue,
 }: {
   value: number;
   index: number;
@@ -158,12 +247,13 @@ function getPointPosition({
   width: number;
   height: number;
   padding: number;
+  maxValue: number;
 }) {
   const x = padding + ((width - padding * 2) * index) / Math.max(total - 1, 1);
   const y =
     height -
     padding -
-    (value / yTicks[yTicks.length - 1]) * (height - padding * 2);
+    (value / Math.max(maxValue, 1)) * (height - padding * 2);
 
   return { x, y };
 }
@@ -243,7 +333,7 @@ type RevenueTrendCardProps = {
 };
 
 export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
-  const [activeIndex, setActiveIndex] = useState(-1);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const width = 640;
   const height = 320;
   const padding = 44;
@@ -260,24 +350,29 @@ export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
     value: item.revenue
   })) : revenueTrendByYear["2026"];
   
-  // Set active index to last item if not set
-  const activeIdx = activeIndex === -1 ? activeTrend.length - 1 : activeIndex;
   const monthTicks = activeTrend.map((item) => item.month);
+  const revenueValues = activeTrend.map((item) => item.value);
+  const recentRevenue = activeTrend.slice(-6);
+  const yTicks = buildRevenueTicks(revenueValues);
+  const maxRevenue = Math.max(...revenueValues, 1);
   const polylinePoints = buildPolyline(
-    activeTrend.map((item) => item.value),
+    revenueValues,
     width,
     height,
     padding,
+    maxRevenue,
   );
-  const activePoint = activeTrend[activeIdx] ?? activeTrend.at(-1);
-  const activePosition = activePoint
+  const activePoint =
+    activeIndex !== null ? activeTrend[activeIndex] ?? null : null;
+  const activePosition = activePoint && activeIndex !== null
     ? getPointPosition({
         value: activePoint.value,
-        index: activeIdx,
+        index: activeIndex,
         total: activeTrend.length,
         width,
         height,
         padding,
+        maxValue: maxRevenue,
       })
     : null;
 
@@ -300,14 +395,15 @@ export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
             role="img"
             aria-label="Tren pendapatan"
           >
-            {yTicks.map((tick) => {
+            {yTicks.map((tick, index) => {
               const y =
                 height -
                 padding -
-                (tick / yTicks[yTicks.length - 1]) * (height - padding * 2);
+                (tick / Math.max(yTicks[yTicks.length - 1], 1)) *
+                  (height - padding * 2);
 
               return (
-                <g key={tick}>
+                <g key={`${tick}-${index}`}>
                   <line
                     x1={padding}
                     x2={width - padding}
@@ -375,6 +471,7 @@ export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
                 width,
                 height,
                 padding,
+                maxValue: maxRevenue,
               });
               const isActive = activeIndex === index;
 
@@ -383,13 +480,16 @@ export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
                   key={item.month}
                   tabIndex={0}
                   role="button"
-                  aria-label={`${item.month} ${formatCompactCurrency(item.value)}`}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onFocus={() => setActiveIndex(index)}
+                  aria-label={`${item.month} ${formatHoverRevenue(item.value)}`}
+                  onClick={() =>
+                    setActiveIndex((current) => (current === index ? null : index))
+                  }
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      setActiveIndex(index);
+                      setActiveIndex((current) =>
+                        current === index ? null : index,
+                      );
                     }
                   }}
                   className="outline-none"
@@ -426,7 +526,7 @@ export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
               <ChartTooltipContent
                 indicator="line"
                 label={`${activePoint.month}`}
-                value={formatCompactCurrency(activePoint.value)}
+                value={formatHoverRevenue(activePoint.value)}
               />
             </ChartTooltip>
           ) : null}
@@ -434,14 +534,23 @@ export function RevenueTrendCard({ data }: RevenueTrendCardProps) {
       </CardContent>
 
       <CardFooter className="flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 text-sm font-semibold text-primary-600">
-          <span className="h-2.5 w-2.5 rounded-full border-2 border-primary-600 bg-[var(--odong-surface-strong)]" />
-          Pendapatan (Rp)
+        <div className="flex flex-col gap-2 text-primary-600">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <span className="h-2.5 w-2.5 rounded-full border-2 border-primary-600 bg-[var(--odong-surface-strong)]" />
+            Pendapatan
+          </div>
+          <div className="space-y-1 pl-5 text-xs font-medium text-[var(--odong-muted-soft)]">
+            {recentRevenue.map((item) => (
+              <p key={item.month}>
+                {item.month}: {formatHoverRevenue(item.value)}
+              </p>
+            ))}
+          </div>
         </div>
         {activePoint ? (
           <p className="text-sm font-bold text-[var(--odong-muted)]">
             Titik aktif: {activePoint.month} •{" "}
-            {formatCompactCurrency(activePoint.value)}
+            {formatHoverRevenue(activePoint.value)}
           </p>
         ) : null}
       </CardFooter>
@@ -460,16 +569,8 @@ export function OrderStatusCard({ data }: OrderStatusCardProps) {
   const activeDistribution = data
     ? (() => {
         const total = data.reduce((sum, item) => sum + item.count, 0);
-        const statusMap: Record<string, { label: string; color: string }> = {
-          selesai: { label: "Selesai", color: "#16a34a" },
-          proses: { label: "Diproses", color: "#d97706" },
-          menunggu: { label: "Menunggu", color: "#e11d48" },
-          dibatalkan: { label: "Dibatalkan", color: "#64748b" },
-        };
-        
-        return data.map(item => {
-          const normalizedStatus = item.status.toLowerCase();
-          const mapping = statusMap[normalizedStatus] || { label: item.status, color: "#94a3b8" };
+        return data.map((item) => {
+          const mapping = formatOrderStatus(item.status);
           const percentage = total > 0 ? Math.round((item.count / total) * 100) : 0;
           
           return {
