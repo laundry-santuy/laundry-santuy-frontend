@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Bolt,
@@ -18,13 +18,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import {
-  createPromoCampaignFromDraft,
-  defaultPromoCampaigns,
-  defaultPromoDraft,
-  type PromoCampaign,
-  type PromoDraft,
-} from "@/lib/promo-campaigns";
+import { type PromoCampaign, type PromoDraft } from "@/lib/promo-campaigns";
 import { usePromoCampaigns } from "@/hooks/use-promo-campaigns";
 import { defaultAdminSettings } from "../data";
 import type { AdminSettingValues } from "../types";
@@ -398,22 +392,12 @@ function SectionHint({
   );
 }
 
-function outletToSettings(outlet: OutletBackend): Partial<AdminSettingValues> {
+function createEmptyPromoDraft(): PromoDraft {
   return {
-    defaultOutlet: outlet.namaOutlet || defaultAdminSettings.defaultOutlet,
-    outletAddress: outlet.alamatOutlet || defaultAdminSettings.outletAddress,
-    outletEmail: outlet.email || defaultAdminSettings.outletEmail,
-    outletPhone: outlet.nomorTelepon || defaultAdminSettings.outletPhone,
-    outletLatitude:
-      outlet.latitude != null
-        ? String(outlet.latitude)
-        : defaultAdminSettings.outletLatitude,
-    outletLongitude:
-      outlet.longitude != null
-        ? String(outlet.longitude)
-        : defaultAdminSettings.outletLongitude,
-    openTime: outlet.jamMulai || defaultAdminSettings.openTime,
-    closeTime: outlet.jamSelesai || defaultAdminSettings.closeTime,
+    code: "",
+    discount: "",
+    minPembelian: "0",
+    tanggalBerakhir: new Date().toISOString().slice(0, 10),
   };
 }
 
@@ -478,7 +462,7 @@ export function AdminSettingsPage({
   settingsData?: SettingsData | null;
 }) {
   // Initialize settings from real data or use defaults
-  const getInitialSettings = (): AdminSettingValues => {
+  const getInitialSettings = useCallback((): AdminSettingValues => {
     if (!settingsData?.umum || !settingsData?.outlet) {
       return defaultAdminSettings;
     }
@@ -529,7 +513,7 @@ export function AdminSettingsPage({
       twoFactorRequired: keamanan?.keamananAplikasi?.twoFactorAuth ?? defaultAdminSettings.twoFactorRequired,
       sessionTimeoutMinutes: keamanan?.pengaturanBackup?.backupRetention.toString() || defaultAdminSettings.sessionTimeoutMinutes,
     };
-  };
+  }, [settingsData]);
 
   const [settings, setSettings] =
     useState<AdminSettingValues>(getInitialSettings());
@@ -552,16 +536,17 @@ export function AdminSettingsPage({
   const [qrisUploading, setQrisUploading] = useState(false);
   const [qrisUploadError, setQrisUploadError] = useState<string | null>(null);
   const qrisInputRef = useRef<HTMLInputElement | null>(null);
-  const [promoDraft, setPromoDraft] =
-    useState<PromoDraft>(defaultPromoDraft);
+  const [promoDraft, setPromoDraft] = useState<PromoDraft>(createEmptyPromoDraft());
+  const [editingPromoId, setEditingPromoId] = useState<string | null>(null);
   const [promoFeedback, setPromoFeedback] = useState<{
     tone: "success" | "error";
     message: string;
   } | null>(null);
   const {
     campaigns: promoCampaigns,
-    setCampaigns: setPromoCampaigns,
-    persist: persistPromoCampaigns,
+    createCampaign,
+    updateCampaign,
+    deleteCampaign,
   } = usePromoCampaigns();
 
   const activeSectionMeta = useMemo(
@@ -635,7 +620,7 @@ export function AdminSettingsPage({
 
   useEffect(() => {
     setSettings(getInitialSettings());
-  }, [settingsData]);
+  }, [getInitialSettings]);
 
   useEffect(() => {
     setOutletRecords(settingsData?.outlet?.semuaOutlet ?? []);
@@ -666,48 +651,74 @@ export function AdminSettingsPage({
     document.getElementById(fieldId)?.focus();
   };
 
-  const addPromoCampaign = () => {
+  const addPromoCampaign = async () => {
     if (!promoDraft.code.trim()) {
       setPromoFeedback({
         tone: "error",
-        message: "Kode promo harus diisi sebelum ditambahkan.",
+        message: "Kode promo harus diisi sebelum disimpan.",
       });
       return;
     }
 
-    const nextCampaign = createPromoCampaignFromDraft(promoDraft);
-    const nextCampaigns = [
-      nextCampaign,
-      ...promoCampaigns.filter(
-        (campaign) => campaign.code.toUpperCase() !== nextCampaign.code,
-      ),
-    ];
+    if (!promoDraft.tanggalBerakhir.trim()) {
+      setPromoFeedback({
+        tone: "error",
+        message: "Tanggal berakhir promo harus diisi.",
+      });
+      return;
+    }
 
-    setPromoCampaigns(nextCampaigns);
-    persistPromoCampaigns(nextCampaigns);
-    setPromoDraft(defaultPromoDraft);
-    setPromoFeedback({
-      tone: "success",
-      message: nextCampaign.active
-        ? `Kode ${nextCampaign.code} berhasil masuk ke daftar promo aktif.`
-        : `Kode ${nextCampaign.code} tersimpan sebagai promo nonaktif.`,
-    });
+    try {
+      if (editingPromoId) {
+        await updateCampaign(editingPromoId, promoDraft);
+      } else {
+        await createCampaign(promoDraft);
+      }
+
+      setPromoDraft(createEmptyPromoDraft());
+      setEditingPromoId(null);
+      setPromoFeedback({
+        tone: "success",
+        message: editingPromoId
+          ? `Kode ${promoDraft.code.toUpperCase()} berhasil diperbarui di database.`
+          : `Kode ${promoDraft.code.toUpperCase()} berhasil ditambahkan ke database.`,
+      });
+    } catch (error) {
+      setPromoFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Gagal menyimpan promo.",
+      });
+    }
   };
 
   const editPromoCampaign = (campaign: PromoCampaign) => {
     setPromoDraft({
-      basePrice: campaign.basePrice,
-      expressSurcharge: campaign.expressSurcharge,
-      minimumOrder: campaign.minimumOrder,
       code: campaign.code,
       discount: campaign.discount,
-      active: campaign.active,
+      minPembelian: campaign.minPembelian,
+      tanggalBerakhir: campaign.tanggalBerakhir,
     });
-    setPromoFeedback({
-      tone: "success",
-      message: `Kode ${campaign.code} siap diedit di panel kiri.`,
-    });
+    setEditingPromoId(campaign.id);
     focusSettingField("settings-promo-code");
+  };
+
+  const handleDeletePromo = async (campaignId: string) => {
+    try {
+      await deleteCampaign(campaignId);
+      setPromoFeedback({
+        tone: "success",
+        message: "Promo berhasil dihapus dari database.",
+      });
+      if (editingPromoId === campaignId) {
+        setEditingPromoId(null);
+        setPromoDraft(createEmptyPromoDraft());
+      }
+    } catch (error) {
+      setPromoFeedback({
+        tone: "error",
+        message: error instanceof Error ? error.message : "Gagal menghapus promo.",
+      });
+    }
   };
 
   const handleOpenEditOutlet = (outlet: OutletBackend) => {
@@ -878,24 +889,10 @@ export function AdminSettingsPage({
     }
   };
 
-  const togglePromoCampaign = (campaignId: string) => {
-    const nextCampaigns = promoCampaigns.map((campaign) =>
-      campaign.id === campaignId
-        ? { ...campaign, active: !campaign.active }
-        : campaign,
-    );
-
-    setPromoCampaigns(nextCampaigns);
-    persistPromoCampaigns(nextCampaigns);
-  };
-
   const saveSettings = async () => {
     setSaveFeedback(null);
 
     try {
-      // persist promo campaigns locally
-      persistPromoCampaigns();
-
       // Prepare payloads
       const umumPayload = {
         namaAplikasi: settings.businessName,
@@ -939,9 +936,8 @@ export function AdminSettingsPage({
   const resetSettings = () => {
     setSettings(defaultAdminSettings);
     setOutletPanelKey((k) => k + 1);
-    setPromoCampaigns(defaultPromoCampaigns);
-    persistPromoCampaigns(defaultPromoCampaigns);
-    setPromoDraft(defaultPromoDraft);
+    setPromoDraft(createEmptyPromoDraft());
+    setEditingPromoId(null);
     setPromoFeedback(null);
     setSavedAt(null);
     setActiveSection("umum");
@@ -1230,79 +1226,42 @@ export function AdminSettingsPage({
                 />
               </div>
 
-              <div className="rounded-[28px] border border-primary-100 bg-primary-50/70 p-4">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-[0.08em] text-primary-600">
-                      Preview promo
-                    </p>
-                    <h4 className="mt-2 text-xl font-extrabold leading-tight text-(--odong-text)">
-                      Hemat {promoDraft.discount || defaultPromoDraft.discount} untuk Express
-                    </h4>
-                    <p className="mt-2 text-sm leading-6 text-(--odong-muted)">
-                      Tarif dasar {promoDraft.basePrice || defaultPromoDraft.basePrice} • Express{" "}
-                      {promoDraft.expressSurcharge ||
-                        defaultPromoDraft.expressSurcharge}{" "}
-                      • Minimum order{" "}
-                      {promoDraft.minimumOrder || defaultPromoDraft.minimumOrder}
-                    </p>
-                  </div>
-                  <div className="shrink-0 rounded-[22px] bg-(--odong-surface-strong) px-4 py-3 text-right shadow-[0_10px_20px_rgba(0,88,202,0.06)]">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary-600">
-                      Kode
-                    </p>
-                    <p className="mt-1 font-mono text-lg font-extrabold tracking-wide text-(--odong-text)">
-                      {(promoDraft.code || defaultPromoDraft.code).toUpperCase()}
-                    </p>
-                  </div>
+              <AdminPanel
+                title="Kode Promo Aktif"
+                description="Kelola kode promo yang tersimpan di database."
+                icon={Sparkles}
+              >
+                <div className="grid gap-4 md:grid-cols-2">
+                  <SettingInput
+                    id="settings-promo-code"
+                    label="Kode promo"
+                    value={promoDraft.code}
+                    onChange={(value) => updatePromoDraft("code", value)}
+                  />
+                  <SettingInput
+                    id="settings-promo-discount"
+                    label="Diskon promo"
+                    value={promoDraft.discount}
+                    onChange={(value) => updatePromoDraft("discount", value)}
+                    helper='Contoh: "12%" atau "Rp15000".'
+                  />
+                  <SettingInput
+                    id="settings-promo-min-pembelian"
+                    label="Minimum pembelian (Rp)"
+                    value={promoDraft.minPembelian}
+                    onChange={(value) => updatePromoDraft("minPembelian", value)}
+                    helper="Isi 0 jika tidak ada minimum."
+                  />
+                  <SettingInput
+                    id="settings-promo-expiry"
+                    label="Berlaku sampai"
+                    type="date"
+                    value={promoDraft.tanggalBerakhir}
+                    onChange={(value) => updatePromoDraft("tanggalBerakhir", value)}
+                    helper="Promo aktif sampai tanggal ini."
+                  />
                 </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <SettingInput
-                  id="settings-price-per-kg"
-                  label="Harga per kg"
-                  value={promoDraft.basePrice}
-                  onChange={(value) => updatePromoDraft("basePrice", value)}
-                  helper="Harga dasar untuk layanan reguler."
-                />
-                <SettingInput
-                  id="settings-express-surcharge"
-                  label="Surcharge express"
-                  value={promoDraft.expressSurcharge}
-                  onChange={(value) =>
-                    updatePromoDraft("expressSurcharge", value)
-                  }
-                  helper="Persentase tambahan untuk layanan express."
-                />
-                <SettingInput
-                  id="settings-minimum-order"
-                  label="Minimum order"
-                  value={promoDraft.minimumOrder}
-                  onChange={(value) => updatePromoDraft("minimumOrder", value)}
-                />
-                <SettingInput
-                  id="settings-promo-code"
-                  label="Kode promo"
-                  value={promoDraft.code}
-                  onChange={(value) => updatePromoDraft("code", value)}
-                />
-                <SettingInput
-                  id="settings-promo-discount"
-                  label="Diskon promo"
-                  value={promoDraft.discount}
-                  onChange={(value) => updatePromoDraft("discount", value)}
-                />
-                <SettingSelect
-                  id="settings-promo-status"
-                  label="Status promo"
-                  value={promoDraft.active ? "Aktif" : "Nonaktif"}
-                  options={["Aktif", "Nonaktif"]}
-                  onChange={(value) =>
-                    updatePromoDraft("active", value === "Aktif")
-                  }
-                />
-              </div>
+              </AdminPanel>
 
               {promoFeedback ? (
                 <div
@@ -1319,8 +1278,9 @@ export function AdminSettingsPage({
 
               <div className="flex flex-col gap-3 border-t border-(--odong-border) pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm leading-6 text-(--odong-muted)">
-                  Klik tambahkan untuk memasukkan preview ini ke daftar kode
-                  promo aktif di kanan.
+                  {editingPromoId
+                    ? "Klik simpan untuk memperbarui promo di database."
+                    : "Klik tambahkan untuk memasukkan promo baru ke database."}
                 </p>
                 <button
                   type="button"
@@ -1328,7 +1288,7 @@ export function AdminSettingsPage({
                   className={adminPrimaryButtonClass}
                 >
                   <Plus className="h-4 w-4" aria-hidden="true" />
-                  Tambahkan
+                  {editingPromoId ? "Simpan promo" : "Tambahkan"}
                 </button>
               </div>
             </div>
@@ -1518,7 +1478,7 @@ export function AdminSettingsPage({
               <PromoCodesPanel
                 campaigns={promoCampaigns}
                 onEdit={editPromoCampaign}
-                onToggle={togglePromoCampaign}
+                onDelete={handleDeletePromo}
               />
               <SaveStatusCard
                 savedAt={savedAt}

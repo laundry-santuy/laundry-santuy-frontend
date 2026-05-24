@@ -230,16 +230,38 @@ export type PengaturanHarga = {
 export type KodePromo = {
   id_promo: string;
   kode: string;
-  diskonPersen: number;
-  diskonNominal: number;
+  diskonPersen: number | null;
+  diskonNominal: number | null;
   minPembelian: number;
-  tanggalAkhir: string;
+  tanggalAkhir: string | null;
+  isActive?: boolean;
 };
 
 export type DashboardHargaPromoResponse = {
   pengaturanHarga: PengaturanHarga;
   kodePromoAktif: KodePromo[];
 };
+
+export type PromoBackend = {
+  id_promo: string;
+  kode: string;
+  diskon_persen: number | null;
+  diskon_nominal: number | null;
+  min_pembelian: number;
+  tanggal_berakhir: string | null;
+  is_active?: boolean;
+};
+
+export type CreatePromoBody = {
+  kode: string;
+  diskonPersen?: number | null;
+  diskonNominal?: number | null;
+  minPembelian?: number;
+  tanggalBerakhir?: string;
+  isActive?: boolean;
+};
+
+export type UpdatePromoBody = Partial<CreatePromoBody>;
 
 export type KeamananAplikasi = {
   twoFactorAuth: boolean;
@@ -346,7 +368,7 @@ export function createLayanan(
   return apiClient.post('/api/layanan', body);
 }
 
-export function updatePesananStatus(id: string, status: string): Promise<{ message: string; pesanan?: any }> {
+export function updatePesananStatus(id: string, status: string): Promise<{ message: string; pesanan?: Record<string, unknown> }> {
   return apiClient.patch(`/api/admin/pesanan/${id}/status`, { status });
 }
 
@@ -358,7 +380,7 @@ export type CreatePesananAdminBody = {
   status?: string;
 };
 
-export function createPesananAdmin(body: CreatePesananAdminBody): Promise<{ message: string; pesanan?: any }> {
+export function createPesananAdmin(body: CreatePesananAdminBody): Promise<{ message: string; pesanan?: Record<string, unknown> }> {
   return apiClient.post('/api/admin/pesanan', body);
 }
 
@@ -415,6 +437,18 @@ export type UpdatePengaturanHargaBody = {
 
 export function updatePengaturanHarga(body: UpdatePengaturanHargaBody): Promise<{ message: string }> {
   return apiClient.put('/api/admin/pengaturan-harga', body);
+}
+
+export function createAdminPromo(body: CreatePromoBody): Promise<{ message: string; promo: PromoBackend }> {
+  return apiClient.post('/api/admin/promo', body);
+}
+
+export function updateAdminPromo(idPromo: string, body: UpdatePromoBody): Promise<{ message: string; promo: PromoBackend }> {
+  return apiClient.put(`/api/admin/promo/${idPromo}`, body);
+}
+
+export function deleteAdminPromo(idPromo: string): Promise<{ message: string }> {
+  return apiClient.del(`/api/admin/promo/${idPromo}`);
 }
 
 export type UpdatePengaturanOutletBody = {

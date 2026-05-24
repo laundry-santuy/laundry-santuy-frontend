@@ -5,31 +5,28 @@ export type PromoCampaign = {
   description: string;
   code: string;
   validUntil: string;
-  basePrice: string;
-  expressSurcharge: string;
-  minimumOrder: string;
   discount: string;
   active: boolean;
+  diskonPersen: string;
+  diskonNominal: string;
+  minPembelian: string;
+  tanggalBerakhir: string;
 };
 
 export type PromoDraft = {
-  basePrice: string;
-  expressSurcharge: string;
-  minimumOrder: string;
   code: string;
   discount: string;
-  active: boolean;
+  minPembelian: string;
+  tanggalBerakhir: string;
 };
 
 export const promoCampaignsStorageKey = "laundry-santuy-promo-campaigns";
 
 export const defaultPromoDraft: PromoDraft = {
-  basePrice: "Rp 7.500",
-  expressSurcharge: "35%",
-  minimumOrder: "Rp 18.000",
   code: "SANTUY12",
   discount: "12%",
-  active: true,
+  minPembelian: "18000",
+  tanggalBerakhir: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
 };
 
 export const defaultPromoCampaigns: PromoCampaign[] = [
@@ -40,11 +37,12 @@ export const defaultPromoCampaigns: PromoCampaign[] = [
     description: "Buat order pertama dan nikmati laundry santai tanpa antre.",
     code: "SANTUY20",
     validUntil: "31 Maret 2026",
-    basePrice: "Rp 7.500",
-    expressSurcharge: "35%",
-    minimumOrder: "Rp 18.000",
     discount: "20%",
     active: true,
+    diskonPersen: "20",
+    diskonNominal: "",
+    minPembelian: "18000",
+    tanggalBerakhir: "2026-03-31",
   },
   {
     id: "promo-kilat15",
@@ -53,11 +51,12 @@ export const defaultPromoCampaigns: PromoCampaign[] = [
     description: "Cocok untuk pakaian kerja yang harus siap lebih cepat.",
     code: "KILAT15",
     validUntil: "15 April 2026",
-    basePrice: "Rp 7.500",
-    expressSurcharge: "35%",
-    minimumOrder: "Rp 18.000",
     discount: "Rp15.000",
     active: true,
+    diskonPersen: "",
+    diskonNominal: "15000",
+    minPembelian: "18000",
+    tanggalBerakhir: "2026-04-15",
   },
   {
     id: "promo-beddingfree",
@@ -66,11 +65,12 @@ export const defaultPromoCampaigns: PromoCampaign[] = [
     description: "Seprei dan bed cover dijemput tanpa minimum transaksi.",
     code: "BEDDINGFREE",
     validUntil: "30 April 2026",
-    basePrice: "Rp 7.500",
-    expressSurcharge: "35%",
-    minimumOrder: "Rp 18.000",
     discount: "Gratis pickup",
     active: true,
+    diskonPersen: "",
+    diskonNominal: "",
+    minPembelian: "0",
+    tanggalBerakhir: "2026-04-30",
   },
 ];
 
@@ -86,6 +86,31 @@ function toBoolean(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
 
+function formatPromoDateLabel(value: string) {
+  if (!value) return "Aktif sekarang";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Aktif sekarang";
+
+  return parsed.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatDiscountLabel(diskonPersen: string, diskonNominal: string) {
+  if (diskonPersen) {
+    return `${diskonPersen}%`;
+  }
+
+  if (diskonNominal) {
+    return `Rp${Number(diskonNominal || 0).toLocaleString("id-ID")}`;
+  }
+
+  return defaultPromoDraft.discount;
+}
+
 function buildPromoId(code: string) {
   const slug = code
     .trim()
@@ -99,23 +124,22 @@ function buildPromoId(code: string) {
 export function createPromoCampaignFromDraft(draft: PromoDraft): PromoCampaign {
   const code = draft.code.trim().toUpperCase() || defaultPromoDraft.code;
   const discount = draft.discount.trim() || defaultPromoDraft.discount;
-  const basePrice = draft.basePrice.trim() || defaultPromoDraft.basePrice;
-  const expressSurcharge =
-    draft.expressSurcharge.trim() || defaultPromoDraft.expressSurcharge;
-  const minimumOrder = draft.minimumOrder.trim() || defaultPromoDraft.minimumOrder;
+  const minimumOrder = draft.minPembelian.trim() || defaultPromoDraft.minPembelian;
+  const tanggalBerakhir = draft.tanggalBerakhir.trim() || defaultPromoDraft.tanggalBerakhir;
 
   return {
     id: buildPromoId(code),
     eyebrow: "Promo aktif",
     title: `Hemat ${discount} untuk Express`,
-    description: `Tarif dasar ${basePrice} • Express ${expressSurcharge} • Minimum order ${minimumOrder}`,
+    description: `Minimum pembelian Rp${Number(minimumOrder || 0).toLocaleString("id-ID")}`,
     code,
-    validUntil: "Aktif sekarang",
-    basePrice,
-    expressSurcharge,
-    minimumOrder,
+    validUntil: formatPromoDateLabel(tanggalBerakhir),
     discount,
-    active: draft.active,
+    active: true,
+    diskonPersen: discount.includes("%") ? discount.replace("%", "") : "",
+    diskonNominal: discount.startsWith("Rp") ? discount.replace(/[^\d]/g, "") : "",
+    minPembelian: minimumOrder,
+    tanggalBerakhir,
   };
 }
 
@@ -143,14 +167,45 @@ export function sanitizePromoCampaign(
     ),
     code,
     validUntil: toText(input.validUntil, "Aktif sekarang"),
-    basePrice: toText(input.basePrice, defaultPromoDraft.basePrice),
-    expressSurcharge: toText(
-      input.expressSurcharge,
-      defaultPromoDraft.expressSurcharge,
-    ),
-    minimumOrder: toText(input.minimumOrder, defaultPromoDraft.minimumOrder),
     discount: toText(input.discount, defaultPromoDraft.discount),
     active: toBoolean(input.active, true),
+    diskonPersen: typeof input.diskonPersen === "string" ? input.diskonPersen : typeof input.diskon_persen === "number" ? String(input.diskon_persen) : "",
+    diskonNominal: typeof input.diskonNominal === "string" ? input.diskonNominal : typeof input.diskon_nominal === "number" ? String(input.diskon_nominal) : "",
+    minPembelian: typeof input.minPembelian === "string" ? input.minPembelian : typeof input.min_pembelian === "number" ? String(input.min_pembelian) : "",
+    tanggalBerakhir: toText(input.tanggalBerakhir ?? input.tanggal_berakhir, defaultPromoDraft.tanggalBerakhir),
+  };
+}
+
+export function mapBackendPromoToCampaign(input: {
+  id_promo: string;
+  kode: string;
+  diskon_persen: number | null;
+  diskon_nominal: number | null;
+  min_pembelian: number;
+  tanggal_berakhir: string | null;
+  is_active?: boolean;
+}): PromoCampaign {
+  const diskonPersen = input.diskon_persen != null ? String(input.diskon_persen) : "";
+  const diskonNominal = input.diskon_nominal != null ? String(input.diskon_nominal) : "";
+  const minPembelian = input.min_pembelian > 0 ? String(input.min_pembelian) : "";
+  const tanggalBerakhir = input.tanggal_berakhir?.slice(0, 10) || defaultPromoDraft.tanggalBerakhir;
+  const discount = formatDiscountLabel(diskonPersen, diskonNominal);
+
+  return {
+    id: input.id_promo,
+    eyebrow: "Promo aktif",
+    title: `Hemat ${discount} untuk semua layanan`,
+    description: minPembelian
+      ? `Minimum pembelian Rp${Number(minPembelian).toLocaleString("id-ID")}. Masukkan kode saat checkout.`
+      : "Masukkan kode promo saat checkout.",
+    code: input.kode,
+    validUntil: formatPromoDateLabel(tanggalBerakhir),
+    discount,
+    active: input.is_active ?? Boolean(input.tanggal_berakhir),
+    diskonPersen,
+    diskonNominal,
+    minPembelian,
+    tanggalBerakhir,
   };
 }
 
