@@ -5,6 +5,15 @@ import type { PromoCampaign } from "@/lib/promo-campaigns";
 import { AdminPanel } from "../admin-page";
 import { AdminIconButton } from "../admin-table-tools";
 
+function formatCurrency(value: string) {
+  const numericValue = Number(value || 0);
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    return "Tanpa minimum";
+  }
+
+  return `Rp${numericValue.toLocaleString("id-ID")}`;
+}
+
 type PromoCodesPanelProps = {
   campaigns: PromoCampaign[];
   onEdit: (campaign: PromoCampaign) => void;
@@ -53,10 +62,10 @@ export function PromoCodesPanel({
                     </span>
                   </div>
                   <p className="mt-1 text-xs font-semibold leading-5 text-[var(--odong-muted)]">
-                    Diskon: {campaign.discount} • Tarif: {campaign.basePrice}
+                    Diskon: {campaign.discount}
                   </p>
                   <p className="mt-1 text-xs font-semibold leading-5 text-[var(--odong-muted-soft)]">
-                    Min. {campaign.minimumOrder} • Berlaku {campaign.validUntil}
+                    Min. pembelian {formatCurrency(campaign.minPembelian)} • Berlaku sampai {campaign.validUntil}
                   </p>
                 </div>
               </button>
