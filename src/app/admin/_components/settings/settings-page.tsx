@@ -699,10 +699,6 @@ export function AdminSettingsPage({
       tanggalBerakhir: campaign.tanggalBerakhir,
     });
     setEditingPromoId(campaign.id);
-    setPromoFeedback({
-      tone: "success",
-      message: `Kode ${campaign.code} siap diedit di panel kiri.`,
-    });
     focusSettingField("settings-promo-code");
   };
 
