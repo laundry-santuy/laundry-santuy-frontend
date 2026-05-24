@@ -3,87 +3,105 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
-  defaultPromoCampaigns,
-  loadStoredPromoCampaigns,
-  promoCampaignsStorageKey,
-  saveStoredPromoCampaigns,
+  mapBackendPromoToCampaign,
   type PromoCampaign,
+  type PromoDraft,
 } from "@/lib/promo-campaigns";
-import { fetchPromoAktif, type PromoApiItem } from "@/lib/user-api";
+import {
+  createAdminPromo,
+  deleteAdminPromo,
+  fetchDashboardHargaPromo,
+  updateAdminPromo,
+  type PromoBackend,
+} from "@/lib/admin-api";
 
-function mapApiPromo(p: PromoApiItem): PromoCampaign {
-  const nilaiDiskon = p.diskon_persen
-    ? `${p.diskon_persen}%`
-    : `Rp${(p.diskon_nominal ?? 0).toLocaleString("id-ID")}`;
-
-  const minBeli =
-    p.min_pembelian > 0
-      ? `Rp${p.min_pembelian.toLocaleString("id-ID")}`
-      : null;
-
-  const tglAkhir = new Date(p.tanggal_berakhir).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
+function mapDashboardPromo(p: PromoBackend): PromoCampaign {
+  return mapBackendPromoToCampaign({
+    id_promo: p.id_promo,
+    kode: p.kode,
+    diskon_persen: p.diskon_persen,
+    diskon_nominal: p.diskon_nominal,
+    min_pembelian: p.min_pembelian,
+    tanggal_berakhir: p.tanggal_berakhir,
+    is_active: p.is_active,
   });
+}
 
+function parseDiscount(draft: PromoDraft) {
+  const rawDiscount = draft.discount.trim();
+
+  if (!rawDiscount) {
+    return { diskonPersen: null as number | null, diskonNominal: null as number | null };
+  }
+
+  if (rawDiscount.includes("%")) {
+    const value = Number(rawDiscount.replace(/[^\d]/g, ""));
+    return {
+      diskonPersen: Number.isFinite(value) && value > 0 ? value : null,
+      diskonNominal: null,
+    };
+  }
+
+  const value = Number(rawDiscount.replace(/[^\d]/g, ""));
   return {
-    id: p.id,
-    eyebrow: "Promo aktif",
-    title: `Hemat ${nilaiDiskon} untuk semua layanan`,
-    description: minBeli
-      ? `Minimum pembelian ${minBeli}. Masukkan kode saat checkout.`
-      : "Masukkan kode promo saat checkout.",
-    code: p.kode,
-    validUntil: tglAkhir,
-    basePrice: "Rp0",
-    expressSurcharge: "0%",
-    minimumOrder: minBeli ?? "Tidak ada minimum",
-    discount: nilaiDiskon,
-    active: true,
+    diskonPersen: null,
+    diskonNominal: Number.isFinite(value) && value > 0 ? value : null,
   };
+}
+
+function parseMinimumOrder(draft: PromoDraft) {
+  const value = Number(draft.minPembelian.replace(/[^\d]/g, ""));
+  return Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
 export function usePromoCampaigns() {
   const [campaigns, setCampaigns] = useState<PromoCampaign[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchPromoAktif()
-      .then(({ promos }) => {
-        // DB punya promo → pakai data DB
-        if (promos.length > 0) {
-          setCampaigns(promos.map(mapApiPromo));
-        } else {
-          // DB kosong → kosongkan, jangan fallback ke dummy
-          setCampaigns([]);
-        }
-      })
-      .catch(() => {
-        // Gagal fetch (network/auth error) → fallback ke localStorage supaya
-        // admin settings page tetap bisa bekerja offline
-        setCampaigns(loadStoredPromoCampaigns() ?? defaultPromoCampaigns);
-      })
-      .finally(() => setLoading(false));
+  const refresh = useCallback(async () => {
+    try {
+      const { kodePromoAktif } = await fetchDashboardHargaPromo();
+      setCampaigns(kodePromoAktif.map(mapDashboardPromo));
+    } catch {
+      setCampaigns([]);
+    }
   }, []);
 
-  // Listener localStorage tetap aktif agar admin settings page bisa push update
   useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === promoCampaignsStorageKey) {
-        setCampaigns(loadStoredPromoCampaigns());
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 0);
 
-  const persist = useCallback(
-    (nextCampaigns?: PromoCampaign[]) => {
-      saveStoredPromoCampaigns(nextCampaigns ?? campaigns);
-    },
-    [campaigns],
-  );
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
 
-  return { campaigns, setCampaigns, persist, loading };
+  const createCampaign = useCallback(async (draft: PromoDraft) => {
+    const { diskonPersen, diskonNominal } = parseDiscount(draft);
+    await createAdminPromo({
+      kode: draft.code,
+      diskonPersen,
+      diskonNominal,
+      minPembelian: parseMinimumOrder(draft),
+      tanggalBerakhir: draft.tanggalBerakhir,
+    });
+    await refresh();
+  }, [refresh]);
+
+  const updateCampaign = useCallback(async (idPromo: string, draft: PromoDraft) => {
+    const { diskonPersen, diskonNominal } = parseDiscount(draft);
+    await updateAdminPromo(idPromo, {
+      kode: draft.code,
+      diskonPersen,
+      diskonNominal,
+      minPembelian: parseMinimumOrder(draft),
+      tanggalBerakhir: draft.tanggalBerakhir,
+    });
+    await refresh();
+  }, [refresh]);
+
+  const deleteCampaign = useCallback(async (idPromo: string) => {
+    await deleteAdminPromo(idPromo);
+    await refresh();
+  }, [refresh]);
+
+  return { campaigns, refresh, createCampaign, updateCampaign, deleteCampaign };
 }

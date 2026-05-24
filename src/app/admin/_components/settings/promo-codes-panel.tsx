@@ -1,4 +1,4 @@
-import { BadgePercent, PencilLine, Sparkles } from "lucide-react";
+import { BadgePercent, PencilLine, Sparkles, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { PromoCampaign } from "@/lib/promo-campaigns";
@@ -8,25 +8,23 @@ import { AdminIconButton } from "../admin-table-tools";
 type PromoCodesPanelProps = {
   campaigns: PromoCampaign[];
   onEdit: (campaign: PromoCampaign) => void;
-  onToggle: (campaignId: string) => void;
+  onDelete: (campaignId: string) => void;
 };
 
 export function PromoCodesPanel({
   campaigns,
   onEdit,
-  onToggle,
+  onDelete,
 }: PromoCodesPanelProps) {
-  const activeCampaigns = campaigns.filter((campaign) => campaign.active);
-
   return (
     <AdminPanel
       title="Kode Promo Aktif"
-      description={`${activeCampaigns.length} kode siap tampil di beranda user.`}
+      description={`${campaigns.length} promo tersimpan di database.`}
       icon={BadgePercent}
     >
-      {activeCampaigns.length > 0 ? (
+      {campaigns.length > 0 ? (
         <div className="space-y-3">
-          {activeCampaigns.map((campaign) => (
+          {campaigns.map((campaign) => (
             <div
               key={campaign.id}
               className="flex items-center justify-between gap-4 rounded-[24px] border border-[var(--odong-border)] bg-[var(--odong-surface-muted)] px-4 py-4"
@@ -45,8 +43,13 @@ export function PromoCodesPanel({
                     <p className="font-mono text-sm font-extrabold tracking-wide text-[var(--odong-text)]">
                       {campaign.code}
                     </p>
-                    <span className="rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-bold text-primary-700">
-                      Aktif
+                    <span className={cn(
+                      "rounded-full px-2.5 py-1 text-[11px] font-bold",
+                      campaign.active
+                        ? "bg-primary-50 text-primary-700"
+                        : "bg-[var(--odong-surface-soft)] text-[var(--odong-muted)]",
+                    )}>
+                      {campaign.active ? "Aktif" : "Kedaluwarsa"}
                     </span>
                   </div>
                   <p className="mt-1 text-xs font-semibold leading-5 text-[var(--odong-muted)]">
@@ -67,23 +70,11 @@ export function PromoCodesPanel({
                 />
                 <button
                   type="button"
-                  role="switch"
-                  aria-checked={campaign.active}
-                  aria-label={`Nonaktifkan promo ${campaign.code}`}
-                  onClick={() => onToggle(campaign.id)}
-                  className={cn(
-                    "flex h-8 w-14 shrink-0 items-center rounded-full p-1 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300",
-                    campaign.active
-                      ? "bg-primary-600"
-                      : "bg-[var(--odong-surface-soft)]",
-                  )}
+                  aria-label={`Hapus promo ${campaign.code}`}
+                  onClick={() => onDelete(campaign.id)}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-rose-100 bg-rose-50 text-rose-600 transition hover:bg-rose-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
                 >
-                  <span
-                    className={cn(
-                      "h-6 w-6 rounded-full bg-[var(--odong-surface-strong)] shadow-[0_8px_16px_rgba(25,28,29,0.12)] transition",
-                      campaign.active ? "translate-x-6" : "translate-x-0",
-                    )}
-                  />
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </div>
             </div>
