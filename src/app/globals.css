@@ -230,4 +230,22 @@ body {
   }
 }
 
-/* sisanya tetap sama */
+/* Workspace driver card - solid white in light mode */
+.driver-workspace-card {
+  background-color: #ffffff;
+}
+
+.dark .driver-workspace-card {
+  background-color: rgba(0, 25, 69, 0.4);
+}
+
+/* Stat pills - solid white background in light mode */
+.stat-pill-base {
+  background-color: #ffffff;
+}
+
+/* Label text white on dark accepted/rejected pills */
+.dark .border-emerald-100 > span:last-child,
+.dark .border-red-100 > span:last-child {
+  color: #ffffff;
+}

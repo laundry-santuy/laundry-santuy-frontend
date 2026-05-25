@@ -85,7 +85,7 @@ export function IncomingOrderCard({
   const theme = statusStyles[order.status];
 
   return (
-    <article className="group relative overflow-hidden rounded-[34px] border border-[var(--odong-border)] bg-[var(--odong-surface)] p-4 shadow-[0_18px_46px_rgba(25,28,29,0.07)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_62px_rgba(25,28,29,0.11)] sm:p-5">
+    <article className="group relative overflow-hidden rounded-[34px] border border-primary-100 bg-white dark:border-[var(--odong-border)] dark:bg-[var(--odong-surface)] p-4 shadow-[0_18px_46px_rgba(25,28,29,0.07)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_26px_62px_rgba(25,28,29,0.11)] sm:p-5">
       <div
         className={cn(
           "absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r",
@@ -119,8 +119,8 @@ export function IncomingOrderCard({
         </span>
       </div>
 
-      <div className="mt-5 space-y-3 rounded-[28px] bg-[var(--odong-surface-muted)] p-4">
-        <div className="flex flex-col gap-4 rounded-2xl bg-white/45 p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-5 space-y-3 rounded-[28px] bg-primary-50/50 dark:bg-[var(--odong-surface-muted)] p-4">
+        <div className="flex flex-col gap-4 rounded-2xl bg-white p-3 dark:bg-white/45 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary-600 text-base font-extrabold text-white shadow-[0_14px_26px_rgba(0,88,202,0.20)]">
               {order.customerInitials}
@@ -164,7 +164,7 @@ export function IncomingOrderCard({
           </a>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--odong-border)] bg-white/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-primary-100 bg-white p-3 dark:border-[var(--odong-border)] dark:bg-white/70 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--odong-muted-soft)]">
               Alamat Outlet
@@ -206,7 +206,7 @@ export function IncomingOrderCard({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 rounded-[28px] border border-[var(--odong-border)] bg-[var(--odong-surface-strong)] p-4 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 rounded-[28px] border border-primary-100 bg-white dark:border-[var(--odong-border)] dark:bg-[var(--odong-surface-strong)] p-4 sm:grid-cols-4">
         <OrderMeta label="Jemput" value={order.pickupTime} />
         <OrderMeta label="Jarak" value={order.distance} />
         <OrderMeta label="Berat" value={order.estimatedWeight} />

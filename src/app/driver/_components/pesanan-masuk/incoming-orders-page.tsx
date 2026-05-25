@@ -3,6 +3,8 @@
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import {
+  ChevronLeft,
+  ChevronRight,
   MapPinned,
   Sparkles,
   UserCheck,
@@ -52,17 +54,17 @@ const statConfig = [
 
 const statPillStyles = {
   incoming: {
-    pill:  "border-primary-100 bg-white/85 dark:border-primary-800/50 dark:bg-primary-950/70",
+    pill:  "border-primary-100 bg-white dark:border-primary-800/50 dark:bg-primary-950/70",
     icon:  "bg-primary-50 text-primary-600 dark:bg-primary-900/60 dark:text-primary-300",
     value: "text-primary-700 dark:text-primary-300",
   },
   accepted: {
-    pill:  "border-emerald-100 bg-white/85 dark:border-emerald-800/50 dark:bg-emerald-950/70",
+    pill:  "border-emerald-100 bg-white dark:border-emerald-800/50 dark:bg-emerald-950/70",
     icon:  "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/60 dark:text-emerald-300",
     value: "text-emerald-700 dark:text-emerald-300",
   },
   rejected: {
-    pill:  "border-red-100 bg-white/85 dark:border-red-800/50 dark:bg-red-950/70",
+    pill:  "border-red-100 bg-white dark:border-red-800/50 dark:bg-red-950/70",
     icon:  "bg-red-50 text-red-600 dark:bg-red-900/60 dark:text-red-300",
     value: "text-red-700 dark:text-red-300",
   },
@@ -74,7 +76,10 @@ export function IncomingOrdersPage() {
   const [pendingId, setPendingId]   = useState<string | null>(null);
   const [searchQuery, setSearchQuery]   = useState("");
   const [activeFilter, setActiveFilter] = useState<DriverOrderFilter>("Semua");
+  const [currentPage, setCurrentPage]   = useState(1);
   const { toasts, toast, dismiss }      = useDriverToast();
+
+  const ORDERS_PER_PAGE = 2;
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +113,7 @@ export function IncomingOrdersPage() {
   );
 
   const filteredOrders = useMemo(() => {
+    setCurrentPage(1);
     const q = searchQuery.trim().toLowerCase();
     return orders.filter((order) => {
       const matchesFilter =
@@ -129,6 +135,12 @@ export function IncomingOrdersPage() {
       return matchesFilter && matchesQuery;
     });
   }, [activeFilter, orders, searchQuery]);
+
+  const totalPages    = Math.ceil(filteredOrders.length / ORDERS_PER_PAGE);
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * ORDERS_PER_PAGE,
+    currentPage * ORDERS_PER_PAGE,
+  );
 
   const nextPickupOrder = incomingOrders[0] ?? orders[0];
   const priorityOrders  = incomingOrders.slice(0, 3);
@@ -167,7 +179,7 @@ export function IncomingOrdersPage() {
 
       <div className="relative z-10 space-y-5 pb-24 sm:pb-28">
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-stretch">
-          <div className="overflow-hidden rounded-[32px] border border-primary-100 bg-primary-50/80 dark:border-primary-800/50 dark:bg-primary-900/40 p-5 shadow-[0_24px_58px_rgba(0,88,202,0.08)] backdrop-blur-xl sm:p-6 lg:p-7">
+          <div className="driver-workspace-card overflow-hidden rounded-[32px] border border-primary-100 dark:border-primary-800/50 dark:bg-primary-900/40 p-5 shadow-[0_24px_58px_rgba(0,88,202,0.08)] sm:p-6 lg:p-7">
             <div className="relative">
               <div className="absolute right-[-80px] top-[-90px] h-64 w-64 rounded-full bg-primary-200/35 blur-3xl" />
               <div className="relative max-w-2xl">
@@ -182,7 +194,7 @@ export function IncomingOrdersPage() {
                       <span
                         key={stat.key}
                         className={cn(
-                          "inline-flex h-10 items-center gap-2 rounded-full border px-3 text-xs font-extrabold shadow-[0_8px_18px_rgba(0,88,202,0.06)] backdrop-blur-xl",
+                          "stat-pill-base inline-flex h-10 items-center gap-2 rounded-full border px-3 text-xs font-extrabold shadow-[0_8px_18px_rgba(0,88,202,0.06)]",
                           statPillStyles[stat.key].pill,
                         )}
                       >
@@ -259,16 +271,58 @@ export function IncomingOrdersPage() {
             />
 
             {filteredOrders.length > 0 ? (
-              <section className="grid gap-5 2xl:grid-cols-2">
-                {filteredOrders.map((order) => (
-                  <IncomingOrderCard
-                    key={order.id}
-                    order={order}
-                    onUpdateStatus={handleUpdateStatus}
-                    isPending={pendingId === order.id}
-                  />
-                ))}
-              </section>
+              <div className="space-y-5">
+                <section className="grid gap-5 2xl:grid-cols-2">
+                  {paginatedOrders.map((order) => (
+                    <IncomingOrderCard
+                      key={order.id}
+                      order={order}
+                      onUpdateStatus={handleUpdateStatus}
+                      isPending={pendingId === order.id}
+                    />
+                  ))}
+                </section>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between gap-3 rounded-[24px] border border-[var(--odong-border)] bg-white px-4 py-3 dark:bg-[var(--odong-surface)]">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--odong-border)] bg-white text-[var(--odong-text)] shadow-sm transition hover:border-primary-200 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-[var(--odong-surface-strong)]"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          type="button"
+                          onClick={() => setCurrentPage(page)}
+                          className={cn(
+                            "inline-flex h-9 w-9 items-center justify-center rounded-full text-xs font-extrabold transition",
+                            page === currentPage
+                              ? "bg-primary-600 text-white shadow-[0_8px_18px_rgba(0,88,202,0.22)]"
+                              : "text-[var(--odong-muted)] hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-900/30",
+                          )}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--odong-border)] bg-white text-[var(--odong-text)] shadow-sm transition hover:border-primary-200 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-[var(--odong-surface-strong)]"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <IncomingOrdersNoResultState />
             )}
@@ -329,7 +383,7 @@ export function IncomingOrdersPage() {
         </div>
 
         <span className="sr-only" aria-live="polite">
-          {filteredOrders.length} pesanan tampil dengan filter {activeFilter}.
+          {filteredOrders.length} pesanan, halaman {currentPage} dari {totalPages}.
         </span>
       </div>
 
