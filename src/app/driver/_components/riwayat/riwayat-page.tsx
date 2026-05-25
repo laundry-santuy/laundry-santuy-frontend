@@ -88,8 +88,8 @@ export function RiwayatPage() {
         {
           icon: Wallet,
           value: stats.totalPendapatan,
-          label: "Total pendapatan",
-          description: "Akumulasi dari order selesai.",
+          label: "Pendapatan ongkir",
+          description: "Akumulasi ongkir dari order selesai.",
         },
       ]
     : [];

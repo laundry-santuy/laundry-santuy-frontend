@@ -62,7 +62,7 @@ export function RiwayatCard({ order }: RiwayatCardProps) {
       <div className="mt-3 flex items-center justify-between rounded-2xl bg-primary-50/70 px-4 py-3">
         <span className="flex items-center gap-2 text-sm font-bold text-[var(--odong-muted)]">
           <Wallet className="h-4 w-4 text-primary-500" aria-hidden="true" />
-          Total pendapatan
+          Pendapatan ongkir
         </span>
         <span className="text-base font-extrabold text-emerald-600">{order.total}</span>
       </div>
