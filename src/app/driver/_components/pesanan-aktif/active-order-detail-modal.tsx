@@ -111,7 +111,7 @@ export function ActiveOrderDetailModal({
   }
 
   const nextStage = getNextActiveStage(order.currentStage);
-  const mapsUrl = getMapsUrl(order.address);
+  const pickupMapsUrl = getMapsUrl(order.address);
 
   return (
     <div className="fixed inset-0 z-[70]">
@@ -290,7 +290,7 @@ export function ActiveOrderDetailModal({
                     Alamat pickup
                   </p>
                   <a
-                    href={mapsUrl}
+                    href={pickupMapsUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="mt-3 flex items-start gap-2 text-sm font-extrabold leading-6 text-[var(--odong-text)] transition hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
@@ -398,13 +398,13 @@ export function ActiveOrderDetailModal({
 
                 <div className="grid gap-3">
                   <a
-                    href={mapsUrl}
+                    href={pickupMapsUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-extrabold text-white shadow-[0_14px_26px_rgba(0,88,202,0.22)] transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
                   >
                     <Navigation className="h-4 w-4" aria-hidden="true" />
-                    Buka Maps
+                    Buka Rute
                   </a>
                   <button
                     type="button"
