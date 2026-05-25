@@ -249,11 +249,6 @@ export function ActiveOrderDetailModal({
                       value: order.pickupTime,
                       icon: Clock3,
                     },
-                    {
-                      label: "Total",
-                      value: order.totalPrice,
-                      icon: Wallet,
-                    },
                   ].map((item) => {
                     const Icon = item.icon;
 
