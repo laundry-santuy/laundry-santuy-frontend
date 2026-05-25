@@ -251,16 +251,6 @@ export function ActiveOrderCard({
         </div>
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-4 rounded-3xl bg-primary-100/75 px-4 py-4">
-        <span className="flex items-center gap-2 text-base font-extrabold text-[var(--odong-text)]">
-          <Wallet className="h-5 w-5 text-primary-600" aria-hidden="true" />
-          Total Harga
-        </span>
-        <span className="text-xl font-extrabold text-emerald-600">
-          {order.totalPrice}
-        </span>
-      </div>
-
       {isDiantar && (
         <div className="mt-4 rounded-3xl border-2 border-dashed border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-700 dark:bg-emerald-950/30">
           <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-400">
