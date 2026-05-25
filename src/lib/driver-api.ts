@@ -56,6 +56,12 @@ type RawIncomingOrder = {
   waktuJemput:  string | null;
   status:       string;
   customer:     { nama: string; inisial: string; telepon: string; alamat: string };
+  outletName?: string;
+  outletAddress?: string;
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+  outletLat?: number | null;
+  outletLng?: number | null;
   layanan:      { nama: string; estimasiBeratKg: number };
   estimasi:     { jarakKm: number; harga: number };
 };
@@ -74,6 +80,12 @@ function mapIncomingOrder(raw: RawIncomingOrder): DriverIncomingOrder {
     customerInitials: raw.customer.inisial,
     phone:          raw.customer.telepon,
     address:        raw.customer.alamat,
+    outletName:     raw.outletName ?? 'Outlet',
+    outletAddress:  raw.outletAddress ?? raw.customer.alamat,
+    pickupLat:      raw.pickupLat ?? null,
+    pickupLng:      raw.pickupLng ?? null,
+    outletLat:      raw.outletLat ?? null,
+    outletLng:      raw.outletLng ?? null,
     pickupTime:     formatJam(raw.waktuJemput),
     service:        raw.layanan.nama,
     estimatedWeight: `~${raw.layanan.estimasiBeratKg} kg`,
@@ -103,6 +115,7 @@ type RawActiveOrder = {
   catatan:       string;
   foto_bukti_url?: string | null;
   customer:      { nama: string; inisial: string; telepon: string; alamat: string };
+  outletAddress?: string;
   layanan:       { nama: string; beratKg: number; waktuJemput: string | null; totalHarga: number };
 };
 
@@ -120,6 +133,7 @@ function mapActiveOrder(raw: RawActiveOrder): DriverActiveOrder {
     customerInitials: raw.customer.inisial,
     phone:            raw.customer.telepon,
     address:          raw.customer.alamat,
+    outletAddress:    raw.outletAddress ?? raw.customer.alamat,
     service:          raw.layanan.nama,
     weight:           `${raw.layanan.beratKg} kg`,
     totalPrice:       formatRupiah(raw.layanan.totalHarga),

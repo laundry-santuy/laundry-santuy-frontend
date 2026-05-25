@@ -35,10 +35,13 @@ const statusStyles = {
   },
 } as const;
 
-function getMapsUrl(address: string) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    address,
-  )}`;
+function getMapsUrl(params: { lat: number | null; lng: number | null }) {
+  const { lat, lng } = params;
+  if (typeof lat === "number" && Number.isFinite(lat) && typeof lng === "number" && Number.isFinite(lng)) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  }
+
+  return null;
 }
 
 type OrderMetaProps = {
@@ -70,7 +73,14 @@ export function IncomingOrderCard({
   onUpdateStatus,
   isPending = false,
 }: IncomingOrderCardProps) {
-  const mapsUrl = getMapsUrl(order.address);
+  const pickupMapsUrl = getMapsUrl({
+    lat: order.pickupLat,
+    lng: order.pickupLng,
+  });
+  const outletMapsUrl = getMapsUrl({
+    lat: order.outletLat,
+    lng: order.outletLng,
+  });
   const isIncoming = order.status === "incoming";
   const theme = statusStyles[order.status];
 
@@ -109,8 +119,8 @@ export function IncomingOrderCard({
         </span>
       </div>
 
-      <div className="mt-5 rounded-[28px] bg-[var(--odong-surface-muted)] p-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-5 space-y-3 rounded-[28px] bg-[var(--odong-surface-muted)] p-4">
+        <div className="flex flex-col gap-4 rounded-2xl bg-white/45 p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary-600 text-base font-extrabold text-white shadow-[0_14px_26px_rgba(0,88,202,0.20)]">
               {order.customerInitials}
@@ -121,10 +131,14 @@ export function IncomingOrderCard({
                 {order.phone}
               </p>
               <a
-                href={mapsUrl}
+                href={pickupMapsUrl ?? undefined}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-2 flex items-start gap-2 text-sm font-extrabold leading-6 text-[var(--odong-text)] transition hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+                aria-disabled={!pickupMapsUrl}
+                className={cn(
+                  "mt-2 flex items-start gap-2 text-sm font-extrabold leading-6 text-[var(--odong-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300",
+                  pickupMapsUrl ? "hover:text-primary-700" : "pointer-events-none opacity-60",
+                )}
               >
                 <MapPin
                   className="mt-1 h-4 w-4 shrink-0 text-primary-600"
@@ -136,13 +150,58 @@ export function IncomingOrderCard({
           </div>
 
           <a
-            href={mapsUrl}
+            href={pickupMapsUrl ?? undefined}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-extrabold text-white shadow-[0_14px_26px_rgba(0,88,202,0.20)] transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
+            aria-disabled={!pickupMapsUrl}
+            className={cn(
+              "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-extrabold text-white shadow-[0_14px_26px_rgba(0,88,202,0.20)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]",
+              pickupMapsUrl ? "hover:-translate-y-0.5 hover:bg-primary-700" : "pointer-events-none opacity-60",
+            )}
           >
             <Navigation className="h-4 w-4" aria-hidden="true" />
-            Maps
+            Rute
+          </a>
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--odong-border)] bg-white/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--odong-muted-soft)]">
+              Alamat Outlet
+            </p>
+            <p className="mt-1 truncate text-sm font-extrabold text-[var(--odong-text)] sm:text-base">
+              {order.outletName}
+            </p>
+            <a
+              href={outletMapsUrl ?? undefined}
+              target="_blank"
+              rel="noreferrer"
+              aria-disabled={!outletMapsUrl}
+              className={cn(
+                "mt-1 flex items-start gap-2 text-sm font-bold leading-6 text-[var(--odong-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300",
+                outletMapsUrl ? "hover:text-primary-700" : "pointer-events-none opacity-60",
+              )}
+            >
+              <MapPin
+                className="mt-1 h-4 w-4 shrink-0 text-primary-600"
+                aria-hidden="true"
+              />
+              <span>{order.outletAddress}</span>
+            </a>
+          </div>
+
+          <a
+            href={outletMapsUrl ?? undefined}
+            target="_blank"
+            rel="noreferrer"
+            aria-disabled={!outletMapsUrl}
+            className={cn(
+              "inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-extrabold text-white shadow-[0_14px_26px_rgba(0,88,202,0.20)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]",
+              outletMapsUrl ? "hover:-translate-y-0.5 hover:bg-primary-700" : "pointer-events-none opacity-60",
+            )}
+          >
+            <Navigation className="h-4 w-4" aria-hidden="true" />
+            Rute
           </a>
         </div>
       </div>
@@ -190,15 +249,6 @@ export function IncomingOrderCard({
           <p className="text-sm font-bold text-[var(--odong-muted)]">
             Order sudah {driverStatusLabels[order.status].toLowerCase()}.
           </p>
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary-600 px-4 text-sm font-extrabold text-white transition hover:-translate-y-0.5 hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 active:scale-[0.98]"
-          >
-            <Navigation className="h-4 w-4" aria-hidden="true" />
-            Rute
-          </a>
         </div>
       )}
     </article>

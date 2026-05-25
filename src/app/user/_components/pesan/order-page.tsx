@@ -128,7 +128,6 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
     () =>
       apiServices.map((s) => ({
         id: s.id_layanan,
-        outletId: s.id_laundry,
         name: s.nama,
         description: s.deskripsi ?? "Layanan laundry berkualitas.",
         price: s.harga,
@@ -190,7 +189,6 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
     if (!preId) return;
     const match = serviceOptions.find((s) => s.id === preId);
     if (!match) return;
-    setSelectedOutletId(match.outletId);
     setSelectedServiceId(preId);
     setQuantity(match.minQuantity);
   }, [serviceOptions, searchParams, selectedServiceId]);
@@ -329,6 +327,13 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
       return;
     }
 
+    const outletId = selectedOutlet?.id_laundry;
+
+    if (!outletId) {
+      setSubmitError("Outlet belum dipilih. Silakan pilih outlet dari interface terlebih dahulu.");
+      return;
+    }
+
     const today    = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
@@ -345,7 +350,7 @@ export function PesanOrderPage({ status = "ready" }: PesanOrderPageProps) {
     try {
       const result = await createPesanan({
         id_layanan: beService.id_layanan,
-        id_laundry: beService.id_laundry,
+        id_laundry: outletId,
         berat: effectiveQuantity,
         tanggal_penjemputan: pickupDate,
         waktu_penjemputan: pickupTime,

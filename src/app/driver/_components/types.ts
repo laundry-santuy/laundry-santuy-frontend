@@ -26,6 +26,12 @@ export type DriverIncomingOrder = {
   customerInitials: string;
   phone: string;
   address: string;
+  outletName: string;
+  outletAddress: string;
+  pickupLat: number | null;
+  pickupLng: number | null;
+  outletLat: number | null;
+  outletLng: number | null;
   pickupTime: string;
   service: string;
   estimatedWeight: string;
@@ -78,6 +84,7 @@ export type DriverActiveOrder = {
   customerInitials: string;
   phone: string;
   address: string;
+  outletAddress: string;
   service: string;
   weight: string;
   totalPrice: string;
