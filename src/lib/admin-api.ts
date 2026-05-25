@@ -235,6 +235,11 @@ export type KodePromo = {
   minPembelian: number;
   tanggalAkhir: string | null;
   isActive?: boolean;
+  diskon_persen?: number | null;
+  diskon_nominal?: number | null;
+  min_pembelian?: number;
+  tanggal_berakhir?: string | null;
+  is_active?: boolean;
 };
 
 export type DashboardHargaPromoResponse = {
