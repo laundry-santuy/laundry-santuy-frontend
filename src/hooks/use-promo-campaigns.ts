@@ -12,18 +12,24 @@ import {
   deleteAdminPromo,
   fetchDashboardHargaPromo,
   updateAdminPromo,
-  type PromoBackend,
+  type KodePromo,
 } from "@/lib/admin-api";
 
-function mapDashboardPromo(p: PromoBackend): PromoCampaign {
+function mapDashboardPromo(p: KodePromo): PromoCampaign {
+  const diskonPersen = p.diskon_persen ?? p.diskonPersen;
+  const diskonNominal = p.diskon_nominal ?? p.diskonNominal;
+  const minPembelian = p.min_pembelian ?? p.minPembelian;
+  const tanggalBerakhir = p.tanggal_berakhir ?? p.tanggalAkhir;
+  const isActive = p.is_active ?? p.isActive;
+
   return mapBackendPromoToCampaign({
     id_promo: p.id_promo,
     kode: p.kode,
-    diskon_persen: p.diskon_persen,
-    diskon_nominal: p.diskon_nominal,
-    min_pembelian: p.min_pembelian,
-    tanggal_berakhir: p.tanggal_berakhir,
-    is_active: p.is_active,
+    diskon_persen: diskonPersen ?? null,
+    diskon_nominal: diskonNominal ?? null,
+    min_pembelian: minPembelian ?? 0,
+    tanggal_berakhir: tanggalBerakhir ?? null,
+    is_active: isActive,
   });
 }
 
@@ -54,15 +60,42 @@ function parseMinimumOrder(draft: PromoDraft) {
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
+function validatePromoDraft(draft: PromoDraft) {
+  const rawDiscount = draft.discount.trim();
+
+  if (!rawDiscount) {
+    return "Diskon promo wajib diisi.";
+  }
+
+  if (rawDiscount.includes("%")) {
+    const value = Number(rawDiscount.replace(/[^\d]/g, ""));
+
+    if (!Number.isFinite(value) || value <= 0) {
+      return "Diskon persen harus berupa angka yang valid.";
+    }
+
+    if (value > 100) {
+      return "Diskon persen maksimal 100%.";
+    }
+  }
+
+  return null;
+}
+
 export function usePromoCampaigns() {
   const [campaigns, setCampaigns] = useState<PromoCampaign[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    setLoading(true);
+
     try {
       const { kodePromoAktif } = await fetchDashboardHargaPromo();
       setCampaigns(kodePromoAktif.map(mapDashboardPromo));
     } catch {
       setCampaigns([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -75,6 +108,12 @@ export function usePromoCampaigns() {
   }, [refresh]);
 
   const createCampaign = useCallback(async (draft: PromoDraft) => {
+    const validationError = validatePromoDraft(draft);
+
+    if (validationError) {
+      throw new Error(validationError);
+    }
+
     const { diskonPersen, diskonNominal } = parseDiscount(draft);
     await createAdminPromo({
       kode: draft.code,
@@ -87,6 +126,12 @@ export function usePromoCampaigns() {
   }, [refresh]);
 
   const updateCampaign = useCallback(async (idPromo: string, draft: PromoDraft) => {
+    const validationError = validatePromoDraft(draft);
+
+    if (validationError) {
+      throw new Error(validationError);
+    }
+
     const { diskonPersen, diskonNominal } = parseDiscount(draft);
     await updateAdminPromo(idPromo, {
       kode: draft.code,
@@ -103,5 +148,5 @@ export function usePromoCampaigns() {
     await refresh();
   }, [refresh]);
 
-  return { campaigns, refresh, createCampaign, updateCampaign, deleteCampaign };
+  return { campaigns, loading, refresh, createCampaign, updateCampaign, deleteCampaign };
 }
